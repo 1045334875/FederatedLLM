@@ -33,3 +33,30 @@ lm_eval --model_args pretrained=./FloRA-llama7b-wiz-homo/,parallelize=True,load_
 ```
 * To evaluate on MT-Bench, please follow the instructions on their websites: https://github.com/lm-sys/FastChat/tree/main/fastchat/llm_judge
 -----
+
+# 新加
+## 在服务器上跑
+
+下面的命令就可以跑起来。
+
+```
+conda activate fedgpt
+python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "./data_wiz" --output_dir './FloRA-llama7b-wiz-homo/' 
+```
+
+## 现有数据集
+
+```
+/data/ty/FALQU 法学领域的数据集10k
+    ./Qrels/        tsv格式的问答匹配关系，四列分别为Question_id, 0, Answer_id, 1
+    ./Topcis/       xml格式的问题，<ID>是Question_id, <BODY>是问题文本, <TITLE>是原文中的题目
+    ./LawPosts.xml  xml格式的回答，<DOCNO>是answer_id, <DOC>是回答文本
+    ./distiltoberta.tsv 运行完生成数据集的会生成这个
+
+/data/ty/MedQuAD 医疗领域 47k
+/data/ty/mashqa_dataset  医疗领域35k，json格式
+/data/ty/nature_question/ 综合问答
+
+```
+
+有一个医学的2k的LLeQA提交申请了还没通过

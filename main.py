@@ -29,11 +29,11 @@ def fl_finetune(
         client_selection_strategy: str = 'random',
         client_selection_frac: float = 1,
         num_communication_rounds: int = 5,
-        num_clients: int = 10,
+        num_clients: int = 3,
         # Local training hyperparams
         local_batch_size: int = 128,  # 64,
         local_micro_batch_size: int = 16,
-        local_num_epochs: int = 3,
+        local_num_epochs: int = 1,
         local_learning_rate: float = 3e-4,
         local_val_set_size: int = 0,
         local_save_steps: int = 3,
