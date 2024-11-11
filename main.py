@@ -1,5 +1,5 @@
 import os
-#os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6,7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 from typing import List
 from tqdm import tqdm
 import fire
@@ -23,10 +23,10 @@ import copy
 def fl_finetune(
         # model/data params
         global_model: str = 'huggyllama/llama-7b',
-        data_path: str = './data',
+        data_path: str = '/data/ty/fedllm',
         output_dir: str = './fedgpt-llama7b-5-2/',
         # FL hyperparamas
-        client_selection_strategy: str = 'random',
+        client_selection_strategy: str = 'fix', # random
         client_selection_frac: float = 1,
         num_communication_rounds: int = 5,
         num_clients: int = 3,
@@ -35,7 +35,7 @@ def fl_finetune(
         local_micro_batch_size: int = 16,
         local_num_epochs: int = 1,
         local_learning_rate: float = 3e-4,
-        local_val_set_size: int = 0,
+        local_val_set_size: float = 0.2, # 划分五分之一为测试集
         local_save_steps: int = 3,
         cutoff_len: int = 512,
         # LoRA hyperparams
@@ -54,7 +54,7 @@ def fl_finetune(
         # aggregation mode
         stacking: bool = False,
         # evaluation
-        dev_data_path: str = './mmlu_test_1444.jsonl',
+        dev_data_path:List[str] = ['/data/ty/fedllm/mashqa_test.json', '/data/ty/fedllm/MedQuAD_test.json', '/data/ty/fedllm/medical_test.json'],
         # heterogeneous
         heter: bool = False,
         local_ranks: List[int] = [64, 32, 16, 16, 8, 8, 4, 4, 4, 4],
@@ -92,7 +92,7 @@ def fl_finetune(
         global_model
     ), "Please specify a --global_model, e.g. --global_modell='decapoda-research/llama-7b-hf'"
 
-    data_path = os.path.join(data_path, str(num_clients))
+    # data_path = os.path.join(data_path, str(num_clients))
     assert (os.path.exists(data_path), "Please generate the data files for each client")
 
     # set up the global model & toknizer
@@ -243,6 +243,8 @@ def fl_finetune(
     output_dir = os.path.join(output_dir, str(num_clients))
 
     acc_list = []
+    rouge_list = []
+    bleu_list = []
 
     for epoch in tqdm(range(num_communication_rounds)):
 
@@ -378,9 +380,12 @@ def fl_finetune(
 
             print('save model')
         
-        acc = global_evaluation(model, tokenizer, prompter, dev_data_path)
-        print('Acc of Epoch', str(epoch), 'is:', acc)
-        acc_list.append(acc)
+        ave_rouge, ave_bleu = global_evaluation(model, tokenizer, prompter, dev_data_path)
+        print('Rouge of Epoch', str(epoch), 'is:', ave_rouge)
+        print('Bleu  of Epoch', str(epoch), 'is:', ave_bleu)
+        # acc_list.append(acc)
+        rouge_list.append(ave_rouge)
+        bleu_list.append(ave_bleu)
         '''x_dir = os.path.join(output_dir, str(epoch))
         current_dir = x_dir # + "/temp/"
         print(current_dir)'''
@@ -398,12 +403,18 @@ def fl_finetune(
             rm_dir = os.path.join(output_dir, str(epoch))
             os.system("rm -rf {xxxxx}".format(xxxxx = rm_dir))
 
-    print(acc_list)          
+    print(rouge_list)      
+    print(bleu_list)       
     #os.system("lm_eval --model_args pretrained=huggyllama/llama-7b,parallelize=True,load_in_4bit=False,peft={current_dir} --tasks arc_challenge,mmlu --device cuda --output_path {current_dir}".format(current_dir = os.path.join(output_dir, str(epoch))))
     filename = output_dir + 'log.txt'
     file = open(filename,'a')
-    for i in range(len(acc_list)):
-        s = str(acc_list[i]).replace('[','').replace(']','')
+    for i in range(len(rouge_list)):
+        s = str(rouge_list[i]).replace('[','').replace(']','')
+        s = s.replace("'",'').replace(',','') +'\n'
+        file.write(s)
+
+    for i in range(len(bleu_list)):
+        s = str(bleu_list[i]).replace('[','').replace(']','')
         s = s.replace("'",'').replace(',','') +'\n'
         file.write(s)
     file.close()

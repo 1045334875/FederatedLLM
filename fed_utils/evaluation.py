@@ -10,6 +10,9 @@ import csv
 from peft import set_peft_model_state_dict
 import numpy as np
 import random
+from rouge import Rouge
+from nltk.translate.bleu_score import sentence_bleu
+from nltk.tokenize import word_tokenize
 
 model_type = 'llama'
 datasets.utils.logging.set_verbosity_error()
@@ -28,13 +31,20 @@ def setup_seed(seed):
 setup_seed(1)
 
 def global_evaluation(model, tokenizer, prompter, dev_data_path):
-    data_class =  ['abstract_algebra', 'anatomy', 'astronomy', 'business_ethics', 'clinical_knowledge', 'college_biology', 'college_chemistry', 'college_computer_science', 'college_mathematics', 'college_medicine', 'college_physics', 'computer_security', 'conceptual_physics', 'econometrics', 'electrical_engineering', 'elementary_mathematics', 'formal_logic', 'global_facts', 'high_school_biology', 'high_school_chemistry', 'high_school_computer_science', 'high_school_european_history', 'high_school_geography', 'high_school_government_and_politics', 'high_school_macroeconomics', 'high_school_mathematics', 'high_school_microeconomics', 'high_school_physics', 'high_school_psychology', 'high_school_statistics', 'high_school_us_history', 'high_school_world_history', 'human_aging', 'human_sexuality', 'international_law', 'jurisprudence', 'logical_fallacies', 'machine_learning', 'management', 'marketing', 'medical_genetics', 'miscellaneous', 'moral_disputes', 'moral_scenarios', 'nutrition', 'philosophy', 'prehistory', 'professional_accounting', 'professional_law', 'professional_medicine', 'professional_psychology', 'public_relations', 'security_studies', 'sociology', 'us_foreign_policy', 'virology', 'world_religions']
-    right_count_dict = dict.fromkeys(data_class, 0)
-    total_count_dict = dict.fromkeys(data_class, 0)
-    acc_count_dict = dict.fromkeys(data_class, 0)
-    with open(dev_data_path, 'r') as f:
-        test_set = json.load(f)
-    count=0
+    # data_class =  ['abstract_algebra', 'anatomy', 'astronomy', 'business_ethics', 'clinical_knowledge', 'college_biology', 'college_chemistry', 'college_computer_science', 'college_mathematics', 'college_medicine', 'college_physics', 'computer_security', 'conceptual_physics', 'econometrics', 'electrical_engineering', 'elementary_mathematics', 'formal_logic', 'global_facts', 'high_school_biology', 'high_school_chemistry', 'high_school_computer_science', 'high_school_european_history', 'high_school_geography', 'high_school_government_and_politics', 'high_school_macroeconomics', 'high_school_mathematics', 'high_school_microeconomics', 'high_school_physics', 'high_school_psychology', 'high_school_statistics', 'high_school_us_history', 'high_school_world_history', 'human_aging', 'human_sexuality', 'international_law', 'jurisprudence', 'logical_fallacies', 'machine_learning', 'management', 'marketing', 'medical_genetics', 'miscellaneous', 'moral_disputes', 'moral_scenarios', 'nutrition', 'philosophy', 'prehistory', 'professional_accounting', 'professional_law', 'professional_medicine', 'professional_psychology', 'public_relations', 'security_studies', 'sociology', 'us_foreign_policy', 'virology', 'world_religions']
+    # right_count_dict = dict.fromkeys(data_class, 0)
+    # total_count_dict = dict.fromkeys(data_class, 0)
+    # acc_count_dict = dict.fromkeys(data_class, 0)
+    # with open(dev_data_path, 'r') as f:
+    #     test_set = json.load(f)
+    
+
+    test_set = []  
+    for file in dev_data_path:
+        with open(file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        test_set.extend(data)
+        count=0
 
     if model_type == 'llama':
         sampling = GenerationConfig(
@@ -54,10 +64,13 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path):
             _from_model_config = True,
         )
 
+    rouge = Rouge()
+    score_rouge = []
+    score_bleu = []
     for data_point in tqdm(test_set):
         count +=1
         target = data_point["output"]
-        class_test_set = data_point["class"]
+        # class_test_set = data_point["class"]
         
         tgt_ans_idx = target.replace('The answer is: ','').split('. ')[0]
         tgt_ans = target.replace('The answer is: ','').split('. ')[1]
@@ -85,41 +98,29 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path):
             # print(generation_output_decoded)
             split = prompter.template["response_split"]
             ans = generation_output_decoded.split(split)[-1].strip()
+        
+            rouge_score = rouge.get_scores(ans, tgt_ans, avg=True)# 计算rouge分数
+            machine_tokens = word_tokenize(ans)
+            reference_tokens = word_tokenize(tgt_ans)
+            bleu = sentence_bleu([reference_tokens], machine_tokens)# 计算BLEU分数
+            score_rouge.append(rouge_score)
+            score_bleu.append(bleu)
             if verbose:
                 print('-------------------')
                 print(test_prompt)
-                print(tgt_ans)
-                print(tgt_ans_idx)
-                print(ans)
-            if tgt_ans_idx+'.' in ans or tgt_ans in ans:
-            # if tgt_ans_idx in ans or tgt_ans in ans:
-                right_count_dict[class_test_set] += 1
-            total_count_dict[class_test_set] += 1
+                print(f"Target:[{tgt_ans}]\nModel :[{ans}]")
+                print(f"Rouge: {rouge_score}")
+                print(f"Bleu : {bleu}")
 
-    mean_acc = 0.
 
-    for key in acc_count_dict.keys():
-        tmp = right_count_dict[key]/total_count_dict[key]
-        mean_acc += tmp
-        acc_count_dict[key] = tmp
-    mean_acc /= len(acc_count_dict.keys())
-    csv_data = [right_count_dict, total_count_dict, acc_count_dict]
-
-    '''with open(os.path.join('/ai4bio-store/junbo.li/data_selection/alpaca-lora/raw_dict_mmlu',data_path.split('/')[-1].replace('.json','') + '.csv'), 'w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=right_count_dict.keys())
-        writer.writeheader()
-        for row in csv_data:
-            writer.writerow(row)'''
+    ave_rouge = sum(rouge_score)/len(rouge_score)
+    ave_bleu = sum(score_bleu)/len(score_bleu)
     if verbose:
-       print(right_count_dict)
-    #print(total_count_dict)
-    print('Acc: ', acc_count_dict)
-    print()
-    #score = eval_usmle(model, dev_data_path, tokenizer, verbose=False)
-    print('========== Accuracy ==========')
-    print(mean_acc)
+        print('========== Accuracy ==========')
+        print(f"Average Rouge: {ave_rouge}")
+        print(f"Average Bleu : {ave_bleu}")
     
-    return mean_acc
+    return ave_rouge, ave_bleu
 
 #model = LlamaForCausalLM.from_pretrained(
 #model = AutoModelForCausalLM.from_pretrained(

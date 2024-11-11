@@ -4,6 +4,7 @@ from datasets import load_dataset
 import copy
 from collections import OrderedDict
 import torch
+from DD import DD
 from peft import (
     get_peft_model_state_dict,
     set_peft_model_state_dict,
@@ -13,8 +14,15 @@ class GeneralClient:
     def __init__(self, client_id, model, data_path, output_dir):
         self.client_id = client_id
         self.model = model
-        self.local_data_path = os.path.join(data_path, "local_training_{}.json".format(self.client_id))
-        self.local_data = load_dataset("json", data_files=self.local_data_path)
+        if client_id == 0:
+            self.local_data_path = os.path.join(data_path, "MedQuAD_train.json".format(self.client_id))
+            self.local_data = load_dataset("json", data_files=self.local_data_path)
+        elif client_id == 1:
+            self.local_data_path = os.path.join(data_path, "mashqa_train.json".format(self.client_id))
+            self.local_data = load_dataset("json", data_files=self.local_data_path)
+        elif client_id == 2:
+            self.local_data_path = os.path.join(data_path, "medical_train.json".format(self.client_id))
+            self.local_data = load_dataset("json", data_files=self.local_data_path)
         self.output_dir = output_dir
         self.local_output_dir = os.path.join(self.output_dir, "trainer_saved", "local_output_{}".format(self.client_id))
 
@@ -66,8 +74,8 @@ class GeneralClient:
                                                   train_dataset=self.local_train_dataset,
                                                   eval_dataset=self.local_eval_dataset,
                                                   args=self.train_args,
-                                                  data_collator=transformers.DataCollatorForSeq2Seq(
-                                                      tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True
+                                                  data_collator=DD(
+                                                      tokenizer, pad_to_multiple_of=8, return_tensors="pt"
                                                   ),
                                                   )
 

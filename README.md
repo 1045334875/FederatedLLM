@@ -41,21 +41,43 @@ lm_eval --model_args pretrained=./FloRA-llama7b-wiz-homo/,parallelize=True,load_
 
 ```
 conda activate fedgpt
-python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "./data_wiz" --output_dir './FloRA-llama7b-wiz-homo/' 
+python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty/fedllm" --output_dir './FloRA-llama7b-non-iid/' 
 ```
 
 ## 现有数据集
 
+整理好的医学的，和之前的local training里面一样，在`/data/ty/fedllm`路径下，都是以下格式的:
+
+```
+    {
+        "instruction": "Answer the following question based on the provided context.",
+        "input": "How is a fecal occult blood test (stool test) used to diagnose gastritis?",
+        "output": "This test checks for the presence of blood in your stool, a possible sign of gastritis."
+    },
+```
+
+ MedQuAD我转为json的时候多加了一行class: health_care
+
+本来转化后是这么大，我们把提取medical_train.json的前1/5，生成medical.json
+- 16M     mashqa_train.json
+- 28M     medical.json
+- 25M     MedQuAD.json
+- 588K    medical_test.json
+- 133M    medical_train.json
+- 596K    medical_valid.json
+
+原始数据集
 ```
 /data/ty/FALQU 法学领域的数据集10k
     ./Qrels/        tsv格式的问答匹配关系，四列分别为Question_id, 0, Answer_id, 1
     ./Topcis/       xml格式的问题，<ID>是Question_id, <BODY>是问题文本, <TITLE>是原文中的题目
     ./LawPosts.xml  xml格式的回答，<DOCNO>是answer_id, <DOC>是回答文本
-    ./distiltoberta.tsv 运行完生成数据集的会生成这个
+    ./convert.py 我写的形成数据集的代码，目前在解读xml的时候会报错
 
-/data/ty/MedQuAD 医疗领域 47k
+/data/ty/MedQuAD 医疗领域 47k 这个整理好了，放在client_datasets下面了
 /data/ty/mashqa_dataset  医疗领域35k，json格式
 /data/ty/nature_question/ 综合问答
+
 
 ```
 
