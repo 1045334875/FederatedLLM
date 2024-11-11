@@ -49,7 +49,7 @@ def split_document(document, length):
     decomposition = binary_decomposition(length)
     sequences = []
     start = 0
-    for power in decomposition:
+    for power in reversed(decomposition):
         sequences.append(document[start:start + power])
         start += power
     return sequences
@@ -58,21 +58,21 @@ def distribute_to_buckets(sequences, buckets):
     """将序列根据长度分配到不同的桶中"""
     for seq in sequences:
         length = len(seq)
-        # 找到合适的桶
-        for i, bucket_power in enumerate(buckets):
-            if length == 2 ** bucket_power:
+        # for i, bucket_power in enumerate(buckets):
+        #     if length == 2 ** i:
+        #         buckets[length].append(seq)
+        #         break
+    
+        for i in range(len(buckets) - 1, -1, -1):
+            bucket_power = 2 ** i
+            if length == bucket_power:
                 buckets[bucket_power].append(seq)
                 break
-        else:  # 如果没有找到完全匹配的桶，将序列放入下一个更大的桶
-            for i, bucket_power in enumerate(buckets):
-                if length < 2 ** (bucket_power + 1):
-                    buckets[bucket_power].append(seq)
-                    break
     return buckets
 
 def get_buckets(filename):
     # 假设我们的桶是2的幂次方，例如：2^0, 2^1, 2^2, ..., 2^9
-    buckets = [[] for _ in range(10)]
+    buckets = [[] for _ in range(12)]
     buckets = {2**i: bucket for i, bucket in enumerate(buckets)}
     
 
