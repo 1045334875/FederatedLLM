@@ -1,5 +1,7 @@
 import json
 import random
+import math
+import pdb
 import torch
 from datasets import load_dataset
 from torch.utils.data import Dataset
@@ -31,13 +33,14 @@ class DDDataset(Dataset):
         start_idx = torch.randint(0, max_start_idx + 1, (1,)).item() # 随机选择一个起始索引
         
         # 根据起始索引取出一个连续的batch
-        input_ids = training_data[start_idx: min(len(training_data), start_idx + self.batch_token)]
-
+        # input_ids = training_data[start_idx: min(len(training_data), start_idx + self.batch_token)]
+        input_ids = training_data[start_idx: min(len(training_data), start_idx + int(math.ceil(self.batch_token/target_bucket_key)))]
         attention_mask = [1] * len(input_ids)
         encoded_input = [{
             "input_ids": input_ids,
             "attention_mask": attention_mask
         }]
+        pdb.set_trace()
         return encoded_input
 
     def __len__(self):
@@ -102,6 +105,7 @@ class DDDataset(Dataset):
             length = len(result["input_ids"])
             sequences = self.split_document(result["input_ids"], length)
             buckets = self.distribute_to_buckets(sequences, buckets)
+            # print(buckets.size())
         
         return length, buckets
 
