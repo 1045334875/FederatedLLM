@@ -3,7 +3,7 @@ lm-evaluation-harness/
 fed_utils/__pycache__/
 utils/__pycache__/
 FloRA-llama7b-non-iid/
-
+__pycache__/
 FloRA-llama7b-*/
 client_data
 count*.txt
