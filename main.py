@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from typing import List
 from tqdm import tqdm
 import fire
@@ -28,14 +28,14 @@ def fl_finetune(
         # FL hyperparamas
         client_selection_strategy: str = 'fix', # random
         client_selection_frac: float = 1,
-        num_communication_rounds: int = 2,
+        num_communication_rounds: int = 5,
         num_clients: int = 3,
         # Local training hyperparams
-        local_batch_size: int = 4,  # 64,
-        local_micro_batch_size: int = 2,
+        local_batch_size: int = 1,  # 64,
+        local_micro_batch_size: int = 1,
         local_num_epochs: int = 1,
         local_learning_rate: float = 3e-4,
-        local_val_set_size: float = 0.2, # 划分五分之一为测试集
+        local_val_set_size: float = 0, # 划分五分之一为测试集
         local_save_steps: int = 3,
         cutoff_len: int = 512,
         # LoRA hyperparams
@@ -60,7 +60,8 @@ def fl_finetune(
         local_ranks: List[int] = [64, 32, 16, 16, 8, 8, 4, 4, 4, 4],
         zero_padding: bool = False,
         Adalora: bool = False,
-        full: bool = False
+        full: bool = False,
+        useDD: bool = True
 ):
     if int(os.environ.get("LOCAL_RANK", 0)) == 0:
         print(
@@ -315,7 +316,7 @@ def fl_finetune(
             client = GeneralClient(client_id, model_client, data_path, output_dir)
 
             print("\nPreparing the local dataset and trainer for Client_{}".format(client_id))
-            client.preprare_local_dataset(generate_and_tokenize_prompt, local_val_set_size)
+            client.preprare_local_dataset(useDD, tokenizer, generate_and_tokenize_prompt, local_val_set_size)
             client.build_local_trainer(tokenizer,
                                        local_micro_batch_size,
                                        gradient_accumulation_steps,

@@ -4,6 +4,7 @@ from datasets import load_dataset
 import copy
 from collections import OrderedDict
 import torch
+from torch.utils.data import Dataset, DataLoader, RandomSampler, SequentialSampler
 from DD import DDDataset
 from peft import (
     get_peft_model_state_dict,
@@ -14,32 +15,34 @@ class GeneralClient:
     def __init__(self, client_id, model, data_path, output_dir):
         self.client_id = client_id
         self.model = model
-        if client_id == 0:
-            self.local_data_path = os.path.join(data_path, "mix1.json") # MedQuAD_train_min
-            self.local_data = load_dataset("json", data_files=self.local_data_path)
-        elif client_id == 1:
-            self.local_data_path = os.path.join(data_path, "mix2.json") # mashqa_train_mini
-            self.local_data = load_dataset("json", data_files=self.local_data_path)
-        elif client_id == 2:
-            self.local_data_path = os.path.join(data_path, "mix3.json") # medical_train_mini
-            self.local_data = load_dataset("json", data_files=self.local_data_path)
+        # filename = ['mix1_pro.json', 'mix2_pro.json',  'mix3_pro.json'] # iid 18M version
+        # filename = ['mix1.json', 'mix2.json',  'mix3.json'] # iid 5M version
+        filename = ['medical_train_mini.json', 'mashqa_train_mini.json',  'MedQuAD_train_mini.json'] # non-iid 5M version
+        # filename = ['medical_train.json', 'mashqa_train.json',  'MedQuAD_train.json']
+        
+        self.local_data_path = os.path.join(data_path, filename[client_id]) 
+        self.local_data = load_dataset("json", data_files=self.local_data_path)
         self.output_dir = output_dir
         self.local_output_dir = os.path.join(self.output_dir, "trainer_saved", "local_output_{}".format(self.client_id))
 
-    def preprare_local_dataset(self, generate_and_tokenize_prompt, local_val_set_size):  # 这里把它拆分成测试集和训练集然后变成token了，里面用max_len去cut了一下
-        if local_val_set_size > 0:
-            local_train_val = self.local_data["train"].train_test_split(
-                test_size=local_val_set_size, shuffle=True, seed=42
-            )
-            self.local_train_dataset = (
-                local_train_val["train"].shuffle().map(generate_and_tokenize_prompt)
-            )
-            self.local_eval_dataset = (
-                local_train_val["test"].shuffle().map(generate_and_tokenize_prompt)
-            )
-        else:
-            self.local_train_dataset = self.local_data["train"].shuffle().map(generate_and_tokenize_prompt)
+    def preprare_local_dataset(self, useDD, tokenizer, generate_and_tokenize_prompt, local_val_set_size):  # 这里把它拆分成测试集和训练集然后变成token了，里面用max_len去cut了一下
+        if useDD:
+            self.local_train_dataset = DDDataset(tokenizer, self.local_data_path)
             self.local_eval_dataset = None
+        else:
+            if local_val_set_size > 0:
+                local_train_val = self.local_data["train"].train_test_split(
+                    test_size=local_val_set_size, shuffle=True, seed=42
+                )
+                self.local_train_dataset = (
+                    local_train_val["train"].shuffle().map(generate_and_tokenize_prompt)
+                )
+                self.local_eval_dataset = (
+                    local_train_val["test"].shuffle().map(generate_and_tokenize_prompt)
+                )
+            else:
+                self.local_train_dataset = self.local_data["train"].shuffle().map(generate_and_tokenize_prompt)
+                self.local_eval_dataset = None
         self.local_val_set_size = local_val_set_size
 
     def build_local_trainer(self,
@@ -50,6 +53,13 @@ class GeneralClient:
                             local_learning_rate,
                             group_by_length,
                             ddp):
+        
+        train_dataloader = DataLoader(
+            self.local_train_dataset,
+            sampler=RandomSampler(self.local_train_dataset),  # 随机采样
+            batch_size=32
+        )
+
         self.train_args = transformers.TrainingArguments(
             per_device_train_batch_size=local_micro_batch_size,
             gradient_accumulation_steps=gradient_accumulation_steps,

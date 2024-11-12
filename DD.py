@@ -1,6 +1,7 @@
 import json
 import random
 import torch
+from datasets import load_dataset
 from torch.utils.data import Dataset
 from collections import defaultdict
 from transformers import DataCollatorWithPadding
@@ -8,41 +9,49 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaTokenizer, Ll
 
 
 class DDDataset(Dataset):
-    def __init__(self, batch_token, tokenizer, filename, bucket_num = 12):
+    def __init__(self, tokenizer, filename, bucket_num = 12):
         # bucket_num  是默认的分桶数量
-        # filename = ['/data/ty/fedllm/medical_train.json', '/data/ty/fedllm/mashqa_train.json',  '/data/ty/fedllm/MedQuAD_train.json']
+        self.bucket_num = bucket_num
         self.tokenizer = tokenizer
-        self.batch_token = batch_token # 一个batch至少要采样多少token
+        self.batch_token = 2048 # 8*8192 # batch_token # 一个batch至少要采样多少token
         self.total_token_per_epoch, self.buckets = self.get_buckets(filename, bucket_num)# 数据集里的token总数, 分桶后的结果
-        self.distribution = self.compute_distribution(self.buckets, bucket_num) # 统计不同
+        self.distribution = self.compute_distribution( bucket_num) # 统计不同
 
-    def __getitem__(self, features):
+
+    def __getitems__(self, feature):
         # 从self.buckets去token作为batch_token的样本
         # 桶的id根据curriculum随机选，选第几个batch也可以随机
         # 桶里的样本平均概率采样，桶的选择按桶样本量/总样本量的概率采样
-        input_ids = [feature['input_ids'] for feature in features]
-        attention_masks = [feature['attention_mask'] for feature in features]
-        
-        # 使用tokenizer的pad方法进行填充
-        batch = self.tokenizer.pad(
-            input_ids,
-            attention_masks,
-            pad_to_multiple_of=self.pad_to_multiple_of,
-            return_tensors=self.return_tensors,
-        )
-        choose_bucket = random.choices(range(self.bucket_num), weights=self.distribution, k=1)[0]
+
+        choose_bucket = random.choices(range(self.bucket_num), weights=self.distribution, k=1)[0] # 随机选取一个bucket
         target_bucket_key = 2**choose_bucket
         training_data = self.buckets[target_bucket_key] # 取出了那个桶里的所有token
-        max_start_idx = len(training_data) - self.batch_token 
+        
+        max_start_idx = max(0, len(training_data) - self.batch_token )
         start_idx = torch.randint(0, max_start_idx + 1, (1,)).item() # 随机选择一个起始索引
         
         # 根据起始索引取出一个连续的batch
-        batch = self.training_data[start_idx:start_idx + self.batch_token]
-        return batch
+        input_ids = training_data[start_idx: min(len(training_data), start_idx + self.batch_token)]
+
+        attention_mask = [1] * len(input_ids)
+        encoded_input = [{
+            "input_ids": input_ids,
+            "attention_mask": attention_mask
+        }]
+        return encoded_input
 
     def __len__(self):
-        return self.total_token_per_epoch // self.batch_token
+        return max(1, self.total_token_per_epoch // self.batch_token)
     
+    def tokenize(self, prompt, add_eos_token=True):
+        result = self.tokenizer(
+            prompt,
+            truncation=True,
+            padding=False,
+            return_tensors=None,
+        )
+        # result["labels"] = result["input_ids"].copy()
+        return result
 
     def binary_decomposition(self, n):
         """返回数字n的二进制分解"""
@@ -86,15 +95,10 @@ class DDDataset(Dataset):
 
         with open(filename, 'r', encoding='utf-8') as file:
             data = json.load(file)
-        tokenizer = LlamaTokenizer.from_pretrained('/data/LLM_models/llama-7b', token="your_token",)
+        # tokenizer = LlamaTokenizer.from_pretrained('/data/LLM_models/llama-7b', token="your_token",)
         for item in data:
             document = item['input'] + item['output']
-            result = tokenizer(
-                document,
-                truncation=False,
-                padding=False,
-                return_tensors=None,
-            )
+            result = self.tokenize(document) # 这里加上了attention mask
             length = len(result["input_ids"])
             sequences = self.split_document(result["input_ids"], length)
             buckets = self.distribute_to_buckets(sequences, buckets)
@@ -102,13 +106,13 @@ class DDDataset(Dataset):
         return length, buckets
 
 
-    def compute_distribution(self, buckets, bucket_num):
+    def compute_distribution(self, bucket_num):
         # 从特定长度的桶中提取数据进行训练
         # 假设我们想要从长度为2^3的桶中提取数据进行训练
-        len = []
+        ll = []
         for i in range(bucket_num):
-            len.append(len(buckets[2**i]))
-        return len
+            ll.append(len(self.buckets[2**i]))
+        return ll
 
 
     
