@@ -41,7 +41,10 @@ lm_eval --model_args pretrained=./FloRA-llama7b-wiz-homo/,parallelize=True,load_
 
 ```
 conda activate fedgpt
-python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty/fedllm" --output_dir './FloRA-llama7b-non-iid/' 
+python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty/fedllm" --output_dir './FloRA-llama7b-test_eva/' 
+python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty/fedllm" --output_dir './FloRA-llama7b-test_mini_eva/' 
+python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty/fedllm" --output_dir './FloRA-llama7b-test_mix_eva/' 
+
 ```
 
 ## 现有数据集

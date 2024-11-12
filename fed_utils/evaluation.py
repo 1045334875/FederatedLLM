@@ -6,13 +6,14 @@ import torch
 import datasets
 from transformers import GenerationConfig
 import json
-import csv
+import math
+from collections import Counter
 from peft import set_peft_model_state_dict
 import numpy as np
 import random
 from rouge import Rouge
-from nltk.translate.bleu_score import sentence_bleu
-from nltk.tokenize import word_tokenize
+# from nltk.translate.bleu_score import sentence_bleu
+# from nltk.tokenize import word_tokenize
 
 model_type = 'llama'
 datasets.utils.logging.set_verbosity_error()
@@ -29,6 +30,32 @@ def setup_seed(seed):
     torch.backends.cudnn.deterministic = True
 
 setup_seed(1)
+
+def ngram_precision(candidate, reference, n):
+    # 提取候选字符串和参考字符串的n-grams
+    candidate_ngrams = Counter([counter for counter in zip(*[candidate[i:] for i in range(n)])])
+    reference_ngrams = Counter([counter for counter in zip(*[reference[i:] for i in range(n)])])
+    clipped_count = sum(min(candidate_ngrams[gram], reference_ngrams[gram]) for gram in candidate_ngrams)
+    all_count = sum(candidate_ngrams[gram] for gram in candidate_ngrams)
+    precision = clipped_count / all_count if candidate_ngrams else 0
+    return precision
+
+def brevity_penalty(candidate, reference):
+    if len(candidate) > len(reference):
+        return 1
+    ratio = len(candidate) / len(reference) if len(reference) > 0 else 0
+    return math.exp(1 - ratio) if ratio < 1 else 1
+
+def sentence_bleu(candidate, reference, max_n=4):
+    # 计算BLEU分数
+    p_ns = [ngram_precision(candidate, reference, n) for n in range(1, max_n + 1) ]
+    p_ns = [p for p in p_ns if p > 0]  # 移除0值
+    if not p_ns:
+        return 0  # 如果没有匹配的n-grams，则BLEU分数为0
+
+    geo_mean = math.exp(math.fsum(math.log(p) for p in p_ns) / len(p_ns))
+    bp = brevity_penalty(candidate, reference) 
+    return bp * geo_mean
 
 def global_evaluation(model, tokenizer, prompter, dev_data_path):
     # data_class =  ['abstract_algebra', 'anatomy', 'astronomy', 'business_ethics', 'clinical_knowledge', 'college_biology', 'college_chemistry', 'college_computer_science', 'college_mathematics', 'college_medicine', 'college_physics', 'computer_security', 'conceptual_physics', 'econometrics', 'electrical_engineering', 'elementary_mathematics', 'formal_logic', 'global_facts', 'high_school_biology', 'high_school_chemistry', 'high_school_computer_science', 'high_school_european_history', 'high_school_geography', 'high_school_government_and_politics', 'high_school_macroeconomics', 'high_school_mathematics', 'high_school_microeconomics', 'high_school_physics', 'high_school_psychology', 'high_school_statistics', 'high_school_us_history', 'high_school_world_history', 'human_aging', 'human_sexuality', 'international_law', 'jurisprudence', 'logical_fallacies', 'machine_learning', 'management', 'marketing', 'medical_genetics', 'miscellaneous', 'moral_disputes', 'moral_scenarios', 'nutrition', 'philosophy', 'prehistory', 'professional_accounting', 'professional_law', 'professional_medicine', 'professional_psychology', 'public_relations', 'security_studies', 'sociology', 'us_foreign_policy', 'virology', 'world_religions']
@@ -72,8 +99,10 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path):
         target = data_point["output"]
         # class_test_set = data_point["class"]
         
-        tgt_ans_idx = target.replace('The answer is: ','').split('. ')[0]
-        tgt_ans = target.replace('The answer is: ','').split('. ')[1]
+        tgt_ans_idx = target.replace('The answer is: ','').split('. ')
+        # print(tgt_ans_idx)
+        # tgt_ans = target.replace('The answer is: ','').split('. ')[1]
+        tgt_ans = tgt_ans_idx[0]
 
         test_prompt = prompter.generate_prompt(
             data_point["instruction"],
@@ -100,9 +129,7 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path):
             ans = generation_output_decoded.split(split)[-1].strip()
         
             rouge_score = rouge.get_scores(ans, tgt_ans, avg=True)# 计算rouge分数
-            machine_tokens = word_tokenize(ans)
-            reference_tokens = word_tokenize(tgt_ans)
-            bleu = sentence_bleu([reference_tokens], machine_tokens)# 计算BLEU分数
+            bleu = sentence_bleu(ans.split(), tgt_ans.split())
             score_rouge.append(rouge_score)
             score_bleu.append(bleu)
             if verbose:
@@ -111,9 +138,29 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path):
                 print(f"Target:[{tgt_ans}]\nModel :[{ans}]")
                 print(f"Rouge: {rouge_score}")
                 print(f"Bleu : {bleu}")
+                break
 
-
-    ave_rouge = sum(rouge_score)/len(rouge_score)
+    scores_accum = {
+        'rouge-1': {'r': [], 'p': [], 'f': []},
+        'rouge-2': {'r': [], 'p': [], 'f': []},
+        'rouge-l': {'r': [], 'p': [], 'f': []},
+    }
+    for scores in score_rouge:
+        for rouge_type, values in scores.items():
+            for metric, value in values.items():
+                scores_accum[rouge_type][metric].append(value)
+    
+    ave_rouge = {
+        'rouge-1': {'r': sum(scores_accum['rouge-1']['r']) / len(scores_accum['rouge-1']['r']),
+                    'p': sum(scores_accum['rouge-1']['p']) / len(scores_accum['rouge-1']['p']),
+                    'f': sum(scores_accum['rouge-1']['f']) / len(scores_accum['rouge-1']['f'])},
+        'rouge-2': {'r': sum(scores_accum['rouge-2']['r']) / len(scores_accum['rouge-2']['r']),
+                    'p': sum(scores_accum['rouge-2']['p']) / len(scores_accum['rouge-2']['p']),
+                    'f': sum(scores_accum['rouge-2']['f']) / len(scores_accum['rouge-2']['f'])},
+        'rouge-l': {'r': sum(scores_accum['rouge-l']['r']) / len(scores_accum['rouge-l']['r']),
+                    'p': sum(scores_accum['rouge-l']['p']) / len(scores_accum['rouge-l']['p']),
+                    'f': sum(scores_accum['rouge-l']['f']) / len(scores_accum['rouge-l']['f'])},
+    }
     ave_bleu = sum(score_bleu)/len(score_bleu)
     if verbose:
         print('========== Accuracy ==========')

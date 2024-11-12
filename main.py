@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3"
 from typing import List
 from tqdm import tqdm
 import fire
@@ -28,11 +28,11 @@ def fl_finetune(
         # FL hyperparamas
         client_selection_strategy: str = 'fix', # random
         client_selection_frac: float = 1,
-        num_communication_rounds: int = 5,
+        num_communication_rounds: int = 2,
         num_clients: int = 3,
         # Local training hyperparams
-        local_batch_size: int = 128,  # 64,
-        local_micro_batch_size: int = 16,
+        local_batch_size: int = 4,  # 64,
+        local_micro_batch_size: int = 2,
         local_num_epochs: int = 1,
         local_learning_rate: float = 3e-4,
         local_val_set_size: float = 0.2, # 划分五分之一为测试集
@@ -54,7 +54,7 @@ def fl_finetune(
         # aggregation mode
         stacking: bool = False,
         # evaluation
-        dev_data_path:List[str] = ['/data/ty/fedllm/mashqa_test.json', '/data/ty/fedllm/MedQuAD_test.json', '/data/ty/fedllm/medical_test.json'],
+        dev_data_path:List[str] = ['/data/ty/fedllm/mashqa_test_mini.json', '/data/ty/fedllm/MedQuAD_test_mini.json', '/data/ty/fedllm/medical_test_mini.json'],
         # heterogeneous
         heter: bool = False,
         local_ranks: List[int] = [64, 32, 16, 16, 8, 8, 4, 4, 4, 4],
@@ -246,6 +246,7 @@ def fl_finetune(
     rouge_list = []
     bleu_list = []
 
+
     for epoch in tqdm(range(num_communication_rounds)):
 
         print("\nConducting the client selection")
@@ -381,8 +382,8 @@ def fl_finetune(
             print('save model')
         
         ave_rouge, ave_bleu = global_evaluation(model, tokenizer, prompter, dev_data_path)
-        print('Rouge of Epoch', str(epoch), 'is:', ave_rouge)
-        print('Bleu  of Epoch', str(epoch), 'is:', ave_bleu)
+        # print('Rouge of Epoch', str(epoch), 'is:', ave_rouge)
+        # print('Bleu  of Epoch', str(epoch), 'is:', ave_bleu)
         # acc_list.append(acc)
         rouge_list.append(ave_rouge)
         bleu_list.append(ave_bleu)
@@ -403,8 +404,8 @@ def fl_finetune(
             rm_dir = os.path.join(output_dir, str(epoch))
             os.system("rm -rf {xxxxx}".format(xxxxx = rm_dir))
 
-    print(rouge_list)      
-    print(bleu_list)       
+    # print(rouge_list)      
+    # print(bleu_list)       
     #os.system("lm_eval --model_args pretrained=huggyllama/llama-7b,parallelize=True,load_in_4bit=False,peft={current_dir} --tasks arc_challenge,mmlu --device cuda --output_path {current_dir}".format(current_dir = os.path.join(output_dir, str(epoch))))
     filename = output_dir + 'log.txt'
     file = open(filename,'a')

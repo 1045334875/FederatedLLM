@@ -60,7 +60,7 @@ if diff_quantity:
                              zip(idx_partition, np.split(category_rows_k_index, proportions))]
             min_size = min([len(idx_j) for idx_j in idx_partition])
 
-        print(min_size)
+        # print(min_size)
 
 
 else:

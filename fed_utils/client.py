@@ -4,7 +4,7 @@ from datasets import load_dataset
 import copy
 from collections import OrderedDict
 import torch
-from DD import DD
+from DD import DDDataset
 from peft import (
     get_peft_model_state_dict,
     set_peft_model_state_dict,
@@ -15,13 +15,13 @@ class GeneralClient:
         self.client_id = client_id
         self.model = model
         if client_id == 0:
-            self.local_data_path = os.path.join(data_path, "MedQuAD_train.json".format(self.client_id))
+            self.local_data_path = os.path.join(data_path, "mix1.json") # MedQuAD_train_min
             self.local_data = load_dataset("json", data_files=self.local_data_path)
         elif client_id == 1:
-            self.local_data_path = os.path.join(data_path, "mashqa_train.json".format(self.client_id))
+            self.local_data_path = os.path.join(data_path, "mix2.json") # mashqa_train_mini
             self.local_data = load_dataset("json", data_files=self.local_data_path)
         elif client_id == 2:
-            self.local_data_path = os.path.join(data_path, "medical_train.json".format(self.client_id))
+            self.local_data_path = os.path.join(data_path, "mix3.json") # medical_train_mini
             self.local_data = load_dataset("json", data_files=self.local_data_path)
         self.output_dir = output_dir
         self.local_output_dir = os.path.join(self.output_dir, "trainer_saved", "local_output_{}".format(self.client_id))
