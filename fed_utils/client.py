@@ -5,7 +5,7 @@ import copy
 from collections import OrderedDict
 import torch
 from torch.utils.data import Dataset, DataLoader, RandomSampler, SequentialSampler
-from DD import DDDataset
+from DD import DDDataset, DD_DataCollatorForSeq2Seq
 from peft import (
     get_peft_model_state_dict,
     set_peft_model_state_dict,
@@ -86,6 +86,8 @@ class GeneralClient:
                                                   args=self.train_args,
                                                   data_collator=transformers.DataCollatorForSeq2Seq(
                                                       tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True)
+                                                #   data_collator=DD_DataCollatorForSeq2Seq(
+                                                #       tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True)
                                                   )
         # DD(tokenizer, pad_to_multiple_of=8, return_tensors="pt"),
 

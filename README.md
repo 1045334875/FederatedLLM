@@ -48,6 +48,14 @@ python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty
 python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty/fedllm" --output_dir './FloRA-llama7b-iid_5/' --useDD True
 python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty/fedllm" --output_dir './FloRA-llama7b-non-iid_5/' --useDD True
 
+python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty/fedllm" --output_dir './FloRA-llama7b-non-iid_5dd/' --useDD True 
+nohup python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty/fedllm" --output_dir './FloRA-llama7b-non-iid_5dd/' --useDD True > out-non-iid-dd.txt  &
+nohup python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty/fedllm" --output_dir './FloRA-llama7b-non-iid_5dd/' --useDD True > out-non-iid-dd.txt  &
+
+nohup python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty/fedllm/new" --output_dir './FloRA-llama7b-non-iid_2/' > out-non-iid-new.txt  &
+nohup python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty/fedllm/new" --output_dir './FloRA-llama7b-iid_2/' > out-iid-new.txt  &
+
+python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty/fedllm" --output_dir './FloRA-llama7b-test/'
 ```
 
 ## 现有数据集

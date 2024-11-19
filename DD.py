@@ -6,9 +6,21 @@ import torch
 from datasets import load_dataset
 from torch.utils.data import Dataset
 from collections import defaultdict
-from transformers import DataCollatorWithPadding
+from transformers import DataCollatorWithPadding, DataCollatorForSeq2Seq
 from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaTokenizer, LlamaForCausalLM, GPT2Tokenizer, GPT2Model, GPT2LMHeadModel, AutoConfig
 
+class DD_DataCollatorForSeq2Seq(DataCollatorForSeq2Seq):
+    def __call__(self, features, return_tensors=None):
+        batch = super(DD_DataCollatorForSeq2Seq, self).__call__(features)
+        # pdb.set_trace()
+        input_ids= batch['input_ids'][0]
+        attention_mask = batch['attention_mask'][0]
+        encoded_input = {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask
+        }
+
+        return encoded_input
 
 class DDDataset(Dataset):
     def __init__(self, tokenizer, filename, bucket_num = 12):
@@ -40,7 +52,7 @@ class DDDataset(Dataset):
             "input_ids": input_ids,
             "attention_mask": attention_mask
         }]
-        pdb.set_trace()
+        # pdb.set_trace()
         return encoded_input
 
     def __len__(self):

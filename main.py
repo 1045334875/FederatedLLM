@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 from typing import List
 from tqdm import tqdm
 import fire
@@ -28,7 +28,7 @@ def fl_finetune(
         # FL hyperparamas
         client_selection_strategy: str = 'fix', # random
         client_selection_frac: float = 1,
-        num_communication_rounds: int = 5,
+        num_communication_rounds: int = 3,
         num_clients: int = 3,
         # Local training hyperparams
         local_batch_size: int = 1,  # 64,

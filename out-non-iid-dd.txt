@@ -1,0 +1,94 @@
+/home/tangyao/temp/FederatedLLM/main.py:97: SyntaxWarning: assertion is always true, perhaps remove parentheses?
+  assert (os.path.exists(data_path), "Please generate the data files for each client")
+Federated Finetuning LLM-LoRA with params:
+global_model: /data/LLM_models/llama-7b
+data_path: /data/ty/fedllm
+output_dir: ./FloRA-llama7b-non-iid_5dd/
+client_selection_strategy: fix
+client_selection_frac: 1
+num_communication_rounds: 5
+num_clients: 3
+local_batch_size: 1
+local_micro_batch_size: 1
+local_num_epochs: 1
+local_learning_rate: 0.0003
+local_val_set_size: 0
+local_save_steps: 3
+cutoff_len: 512
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_target_modules: ['q_proj', 'v_proj']
+train_on_inputs: True
+group_by_length: False
+resume_from_checkpoint: False
+prompt template: alpaca
+
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:03<00:06,  3.36s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:06<00:03,  3.24s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:08<00:00,  2.80s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:08<00:00,  2.93s/it]
+/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/transformers/generation/configuration_utils.py:590: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.9` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`. This was detected when initializing the generation config instance, which means the corresponding file may hold incorrect parameterization and should be fixed.
+  warnings.warn(
+/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/transformers/generation/configuration_utils.py:595: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.6` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`. This was detected when initializing the generation config instance, which means the corresponding file may hold incorrect parameterization and should be fixed.
+  warnings.warn(
+/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/transformers/generation/configuration_utils.py:590: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.9` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/transformers/generation/configuration_utils.py:595: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.6` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+The process of federated instruction-tuning has started..
+  0%|          | 0/5 [00:00<?, ?it/s]Asking to truncate to max_length but no maximum length is provided and the model has no predefined maximum length. Default to no truncation.
+/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/transformers/training_args.py:1559: FutureWarning: `evaluation_strategy` is deprecated and will be removed in version 4.46 of 🤗 Transformers. Use `eval_strategy` instead
+  warnings.warn(
+
+Conducting the client selection
+
+Preparing the local dataset and trainer for Client_0
+Initiating the local training of Client_0
+Local training starts ... 
+
+  0%|          | 0/1 [00:00<?, ?it/s][A> /home/tangyao/temp/FederatedLLM/DD.py(48)__getitems__()
+-> return encoded_input
+(Pdb)   0%|          | 0/5 [00:22<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/tangyao/temp/FederatedLLM/main.py", line 426, in <module>
+    fire.Fire(fl_finetune)
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/fire/core.py", line 135, in Fire
+    component_trace = _Fire(component, args, parsed_flag_args, context, name)
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/fire/core.py", line 468, in _Fire
+    component, remaining_args = _CallAndUpdateTrace(
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/fire/core.py", line 684, in _CallAndUpdateTrace
+    component = fn(*varargs, **kwargs)
+  File "/home/tangyao/temp/FederatedLLM/main.py", line 332, in fl_finetune
+    client.train()
+  File "/home/tangyao/temp/FederatedLLM/fed_utils/client.py", line 106, in train
+    self.local_trainer.train()
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/transformers/trainer.py", line 2122, in train
+    return inner_training_loop(
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/transformers/trainer.py", line 2426, in _inner_training_loop
+    batch_samples, num_items_in_batch = self.get_batch_samples(epoch_iterator, num_batches)
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/transformers/trainer.py", line 5040, in get_batch_samples
+    batch_samples += [next(epoch_iterator)]
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/accelerate/data_loader.py", line 552, in __iter__
+    current_batch = next(dataloader_iter)
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 701, in __next__
+    data = self._next_data()
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 757, in _next_data
+    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/site-packages/torch/utils/data/_utils/fetch.py", line 50, in fetch
+    data = self.dataset.__getitems__(possibly_batched_index)
+  File "/home/tangyao/temp/FederatedLLM/DD.py", line 48, in __getitems__
+    return encoded_input
+  File "/home/tangyao/temp/FederatedLLM/DD.py", line 48, in __getitems__
+    return encoded_input
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/bdb.py", line 88, in trace_dispatch
+    return self.dispatch_line(frame)
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/bdb.py", line 112, in dispatch_line
+    self.user_line(frame)
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/pdb.py", line 262, in user_line
+    self.interaction(frame, None)
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/pdb.py", line 357, in interaction
+    self._cmdloop()
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/pdb.py", line 322, in _cmdloop
+    self.cmdloop()
+  File "/home/tangyao/.conda/envs/fedgpt/lib/python3.9/cmd.py", line 126, in cmdloop
+    line = input(self.prompt)
+OSError: [Errno 9] Bad file descriptor
+  0%|          | 0/1 [00:00<?, ?it/s]
