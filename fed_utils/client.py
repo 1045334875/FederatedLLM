@@ -15,13 +15,19 @@ class GeneralClient:
         self.client_id = client_id
         self.model = model
         if client_id == 0:
-            self.local_data_path = os.path.join(data_path, "mix1.json") # MedQuAD_train_min
+            # self.local_data_path = os.path.join(data_path, "mix1.json") # MedQuAD_train_min
+            self.local_data_path = os.path.join(data_path, "medical_train.json") # MedQuAD_train_min
+            # self.local_data_path = os.path.join(data_path, "medical_test.json") # MedQuAD_train_min
             self.local_data = load_dataset("json", data_files=self.local_data_path)
         elif client_id == 1:
-            self.local_data_path = os.path.join(data_path, "mix2.json") # mashqa_train_mini
+            # self.local_data_path = os.path.join(data_path, "mix2.json") # mashqa_train_mini
+            self.local_data_path = os.path.join(data_path, "law_all_train.json") # mashqa_train_mini
+            # self.local_data_path = os.path.join(data_path, "law_all_test.json") # mashqa_train_mini
             self.local_data = load_dataset("json", data_files=self.local_data_path)
         elif client_id == 2:
-            self.local_data_path = os.path.join(data_path, "mix3.json") # medical_train_mini
+            # self.local_data_path = os.path.join(data_path, "mix3.json") # medical_train_mini//
+            self.local_data_path = os.path.join(data_path, "privacy_train.json") # medical_train_mini
+            # self.local_data_path = os.path.join(data_path, "privacy_test.json") # medical_train_mini
             self.local_data = load_dataset("json", data_files=self.local_data_path)
         self.output_dir = output_dir
         self.local_output_dir = os.path.join(self.output_dir, "trainer_saved", "local_output_{}".format(self.client_id))

@@ -5,5 +5,7 @@ utils/__pycache__/
 FloRA-llama7b-non-iid/
 __pycache__/
 FloRA-llama7b-*/
+FloRA*/
 client_data
 count*.txt
+out*.txt

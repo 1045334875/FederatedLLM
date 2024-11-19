@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 from typing import List
 from tqdm import tqdm
 import fire
@@ -22,20 +22,20 @@ import copy
 
 def fl_finetune(
         # model/data params
-        global_model: str = 'huggyllama/llama-7b',
-        data_path: str = '/data/ty/fedllm',
+        global_model: str = "facebook/opt-1.3b",
+        data_path: str = '/data/ty/fedllm/new',
         output_dir: str = './fedgpt-llama7b-5-2/',
         # FL hyperparamas
         client_selection_strategy: str = 'fix', # random
         client_selection_frac: float = 1,
-        num_communication_rounds: int = 2,
+        num_communication_rounds: int = 5,
         num_clients: int = 3,
         # Local training hyperparams
         local_batch_size: int = 4,  # 64,
         local_micro_batch_size: int = 2,
         local_num_epochs: int = 1,
         local_learning_rate: float = 3e-4,
-        local_val_set_size: float = 0.2, # 划分五分之一为测试集
+        local_val_set_size: float = 0, # 划分五分之一为测试集
         local_save_steps: int = 3,
         cutoff_len: int = 512,
         # LoRA hyperparams
@@ -54,7 +54,7 @@ def fl_finetune(
         # aggregation mode
         stacking: bool = False,
         # evaluation
-        dev_data_path:List[str] = ['/data/ty/fedllm/mashqa_test_mini.json', '/data/ty/fedllm/MedQuAD_test_mini.json', '/data/ty/fedllm/medical_test_mini.json'],
+        dev_data_path:List[str] = ['/data/ty/fedllm/new/privacy_test.json', '/data/ty/fedllm/new/medical_test.json', '/data/ty/fedllm/new/law_all_test.json'],
         # heterogeneous
         heter: bool = False,
         local_ranks: List[int] = [64, 32, 16, 16, 8, 8, 4, 4, 4, 4],
@@ -88,9 +88,9 @@ def fl_finetune(
             f"resume_from_checkpoint: {resume_from_checkpoint or False}\n"
             f"prompt template: {prompt_template_name}\n"
         )
-    assert (
-        global_model
-    ), "Please specify a --global_model, e.g. --global_modell='decapoda-research/llama-7b-hf'"
+    # assert (
+    #     global_model
+    # ), "Please specify a --global_model, e.g. --global_modell='decapoda-research/llama-7b-hf'"
 
     # data_path = os.path.join(data_path, str(num_clients))
     assert (os.path.exists(data_path), "Please generate the data files for each client")
@@ -112,7 +112,7 @@ def fl_finetune(
             torch_dtype=torch.float32,
             device_map=device_map,
         )
-    elif global_model == 'google/gemma-2b' or global_model == 'google/gemma-7b':
+    elif global_model == 'google/gemma-2b' or global_model == 'google/gemma-7b'or global_model == "facebook/opt-1.3b" or global_model == "/data/LLM_models/opt-1.3b":
         model = AutoModelForCausalLM.from_pretrained(
             global_model,
             load_in_8bit=False,
@@ -131,10 +131,13 @@ def fl_finetune(
 
     if global_model == 'gpt2':
         tokenizer = GPT2Tokenizer.from_pretrained(global_model)
-    elif global_model == 'google/gemma-2b' or global_model == 'google/gemma-7b':
+    elif global_model == 'google/gemma-2b' or global_model == 'google/gemma-7b' or global_model == "facebook/opt-1.3b" or global_model == "/data/LLM_models/opt-1.3b":
         tokenizer = AutoTokenizer.from_pretrained(global_model, token='your_token',)
     else:
         tokenizer = LlamaTokenizer.from_pretrained(global_model, token="your_token",)
+
+
+
 
     tokenizer.pad_token_id = (
         0

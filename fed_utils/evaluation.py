@@ -81,7 +81,7 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path):
             top_k=30,
             num_beams=1,
             max_new_tokens=max_new_token,
-            early_stopping=True,
+            early_stopping=False,
         )
 
     if model_type == 'gpt2':
@@ -102,7 +102,10 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path):
         tgt_ans_idx = target.replace('The answer is: ','').split('. ')
         # print(tgt_ans_idx)
         # tgt_ans = target.replace('The answer is: ','').split('. ')[1]
-        tgt_ans = tgt_ans_idx[0]
+        if len(tgt_ans_idx)>1:
+            tgt_ans = tgt_ans_idx[1]
+        else:
+            tgt_ans = tgt_ans_idx[0]
 
         test_prompt = prompter.generate_prompt(
             data_point["instruction"],
@@ -127,7 +130,8 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path):
             # print(generation_output_decoded)
             split = prompter.template["response_split"]
             ans = generation_output_decoded.split(split)[-1].strip()
-        
+            if len(ans) <=0 or len(tgt_ans) <=0:
+                continue
             rouge_score = rouge.get_scores(ans, tgt_ans, avg=True)# 计算rouge分数
             bleu = sentence_bleu(ans.split(), tgt_ans.split())
             score_rouge.append(rouge_score)
