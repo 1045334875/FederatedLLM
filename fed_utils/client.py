@@ -11,24 +11,46 @@ from peft import (
 )
 
 class GeneralClient:
-    def __init__(self, client_id, model, data_path, output_dir):
+    def __init__(self, client_id, model, data_path, output_dir, iid):
         self.client_id = client_id
         self.model = model
-        if client_id == 0:
-            # self.local_data_path = os.path.join(data_path, "mix1.json") # MedQuAD_train_min
-            self.local_data_path = os.path.join(data_path, "medical_train.json") # MedQuAD_train_min
-            # self.local_data_path = os.path.join(data_path, "medical_test.json") # MedQuAD_train_min
-            self.local_data = load_dataset("json", data_files=self.local_data_path)
-        elif client_id == 1:
-            # self.local_data_path = os.path.join(data_path, "mix2.json") # mashqa_train_mini
-            self.local_data_path = os.path.join(data_path, "law_all_train.json") # mashqa_train_mini
-            # self.local_data_path = os.path.join(data_path, "law_all_test.json") # mashqa_train_mini
-            self.local_data = load_dataset("json", data_files=self.local_data_path)
-        elif client_id == 2:
-            # self.local_data_path = os.path.join(data_path, "mix3.json") # medical_train_mini//
-            self.local_data_path = os.path.join(data_path, "privacy_train.json") # medical_train_mini
-            # self.local_data_path = os.path.join(data_path, "privacy_test.json") # medical_train_mini
-            self.local_data = load_dataset("json", data_files=self.local_data_path)
+        if iid:
+            if client_id == 0:
+                self.local_data_path = os.path.join(data_path, "mix1.json") 
+                self.local_data = load_dataset("json", data_files=self.local_data_path)
+            elif client_id == 1:
+                self.local_data_path = os.path.join(data_path, "mix2.json")
+                self.local_data = load_dataset("json", data_files=self.local_data_path)
+            elif client_id == 2:
+                self.local_data_path = os.path.join(data_path, "mix3.json") 
+                self.local_data = load_dataset("json", data_files=self.local_data_path)
+            elif client_id == 3:
+                self.local_data_path = os.path.join(data_path, "mix4.json") 
+                self.local_data = load_dataset("json", data_files=self.local_data_path)
+            elif client_id == 4:
+                self.local_data_path = os.path.join(data_path, "mix5.json") 
+                self.local_data = load_dataset("json", data_files=self.local_data_path)
+        else:
+            if client_id == 0:
+                self.local_data_path = os.path.join(data_path, "medical_train.json") # MedQuAD_train_min
+                # self.local_data_path = os.path.join(data_path, "medical_test.json") # MedQuAD_train_min
+                self.local_data = load_dataset("json", data_files=self.local_data_path)
+            elif client_id == 1:
+                self.local_data_path = os.path.join(data_path, "law_all_train.json") # mashqa_train_mini
+                # self.local_data_path = os.path.join(data_path, "law_all_test.json") # mashqa_train_mini
+                self.local_data = load_dataset("json", data_files=self.local_data_path)
+            elif client_id == 2:
+                self.local_data_path = os.path.join(data_path, "privacy_train.json") # medical_train_mini
+                # self.local_data_path = os.path.join(data_path, "privacy_test.json") # medical_train_mini
+                self.local_data = load_dataset("json", data_files=self.local_data_path)
+            elif client_id == 3:
+                self.local_data_path = os.path.join(data_path, "eli5_1_train.json") # medical_train_mini
+                # self.local_data_path = os.path.join(data_path, "privacy_test.json") # medical_train_mini
+                self.local_data = load_dataset("json", data_files=self.local_data_path)
+            elif client_id == 4:
+                self.local_data_path = os.path.join(data_path, "eli5_2_train.json") # medical_train_mini
+                # self.local_data_path = os.path.join(data_path, "privacy_test.json") # medical_train_mini
+                self.local_data = load_dataset("json", data_files=self.local_data_path)
         self.output_dir = output_dir
         self.local_output_dir = os.path.join(self.output_dir, "trainer_saved", "local_output_{}".format(self.client_id))
 

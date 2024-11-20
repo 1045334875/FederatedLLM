@@ -107,6 +107,9 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path):
         else:
             tgt_ans = tgt_ans_idx[0]
 
+        if len(data_point["input"])==0:
+            continue
+
         test_prompt = prompter.generate_prompt(
             data_point["instruction"],
             data_point["input"],
@@ -116,6 +119,8 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path):
         with torch.autocast("cuda"):
             inputs = tokenizer(test_prompt, return_tensors="pt")
             input =inputs["input_ids"].to('cuda')
+            if input is None:
+                continue
             with torch.no_grad():
                 #print(tokenizer.eos_token_id, tokenizer.pad_token_id)
                 generation_output = model.generate(

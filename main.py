@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 from typing import List
 from tqdm import tqdm
 import fire
@@ -23,13 +23,12 @@ import copy
 def fl_finetune(
         # model/data params
         global_model: str = "facebook/opt-1.3b",
-        data_path: str = '/data/ty/fedllm/new',
+        
         output_dir: str = './fedgpt-llama7b-5-2/',
         # FL hyperparamas
         client_selection_strategy: str = 'fix', # random
         client_selection_frac: float = 1,
         num_communication_rounds: int = 5,
-        num_clients: int = 3,
         # Local training hyperparams
         local_batch_size: int = 4,  # 64,
         local_micro_batch_size: int = 2,
@@ -54,14 +53,28 @@ def fl_finetune(
         # aggregation mode
         stacking: bool = False,
         # evaluation
-        dev_data_path:List[str] = ['/data/ty/fedllm/new/privacy_test.json', '/data/ty/fedllm/new/medical_test.json', '/data/ty/fedllm/new/law_all_test.json'],
         # heterogeneous
         heter: bool = False,
         local_ranks: List[int] = [64, 32, 16, 16, 8, 8, 4, 4, 4, 4],
         zero_padding: bool = False,
         Adalora: bool = False,
-        full: bool = False
+        full: bool = False,
+        usedata: str = 'c3',
+        dataiid: bool = True
 ):
+    if usedata == 'c3':
+        dev_data_path:List[str] = ['/data/ty/fedllm/c3/privacy_test.json', '/data/ty/fedllm/c3/medical_test.json', '/data/ty/fedllm/c3/law_all_test.json']
+        data_path: str = '/data/ty/fedllm/c3'
+        num_clients: int = 3
+    elif usedata == 'c5':
+        dev_data_path:List[str] = ['/data/ty/fedllm/c5/privacy_test.json', '/data/ty/fedllm/c5/medical_test.json', '/data/ty/fedllm/c5/law_all_test.json','/data/ty/fedllm/c5/eli5_1_test.json', '/data/ty/fedllm/c5/eli5_2_test.json']
+        data_path: str = '/data/ty/fedllm/c5'
+        num_clients: int = 5
+    else:
+        dev_data_path:List[str] = ['/data/ty/fedllm/c3/privacy_test.json', '/data/ty/fedllm/c3/medical_test.json', '/data/ty/fedllm/c3/law_all_test.json']
+        data_path: str = '/data/ty/fedllm/c3'
+        num_clients: int = 3,
+       
     if int(os.environ.get("LOCAL_RANK", 0)) == 0:
         print(
             f"Federated Finetuning LLM-LoRA with params:\n"
@@ -315,7 +328,7 @@ def fl_finetune(
             else:
                 model_client = model
 
-            client = GeneralClient(client_id, model_client, data_path, output_dir)
+            client = GeneralClient(client_id, model_client, data_path, output_dir, dataiid)
 
             print("\nPreparing the local dataset and trainer for Client_{}".format(client_id))
             client.preprare_local_dataset(generate_and_tokenize_prompt, local_val_set_size)

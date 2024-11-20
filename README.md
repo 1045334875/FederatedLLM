@@ -46,6 +46,11 @@ python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty
 python main.py --global_model '/data/LLM_models/llama-7b' --data_path  "/data/ty/fedllm/new" --output_dir './FloRA-llama7b-test/' 
 python main.py --global_model "/data/LLM_models/opt-1.3b" --data_path  "/data/ty/fedllm/new" --output_dir './FloRA-opt_1.3b/' 
 
+nohup python main.py --global_model "/data/LLM_models/opt-1.3b" --usedata c3 --dataiid True --output_dir './FloRA-opt-iid_1/' > out-opt-iid1_1.txt  &
+nohup python main.py --global_model "/data/LLM_models/opt-1.3b" --usedata c3  --dataiid False --output_dir './FloRA-opt-non-iid_1/' > out-opt-non-iid1_1.txt  &
+
+nohup python main.py --global_model "/data/LLM_models/opt-1.3b" --usedata c5 --dataiid True --output_dir './FloRA-opt-iid_2/' > out-opt-iid2.txt  &
+nohup python main.py --global_model "/data/LLM_models/opt-1.3b" --usedata c5 --dataiid False --output_dir './FloRA-opt-non-iid_2/' > out-opt-non-iid2_1.txt  &
 
 ```
 
