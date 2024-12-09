@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 from typing import List
 from tqdm import tqdm
 import fire
@@ -55,20 +55,41 @@ def fl_finetune(
         # evaluation
         # heterogeneous
         heter: bool = False,
-        local_ranks: List[int] = [64, 32, 16, 16, 8, 8, 4, 4, 4, 4],
+        local_ranks: List[int] = [16, 16, 16, 16, 16, 16, 16, 16, 16, 16],# [64, 32, 16, 16, 8, 8, 4, 4, 4, 4],
         zero_padding: bool = False,
         Adalora: bool = False,
         full: bool = False,
         usedata: str = 'c3',
-        dataiid: bool = True
+        dataiid: bool = True,
+        model_type = 'gemma'
 ):
     if usedata == 'c3':
         dev_data_path:List[str] = ['/data/ty/fedllm/c3/privacy_test.json', '/data/ty/fedllm/c3/medical_test.json', '/data/ty/fedllm/c3/law_all_test.json']
         data_path: str = '/data/ty/fedllm/c3'
         num_clients: int = 3
+    elif usedata == 'c3mini':
+        dev_data_path:List[str] = ['/data/ty/fedllm/c3mini/privacy_test.json', '/data/ty/fedllm/c3mini/medical_test.json', '/data/ty/fedllm/c3mini/law_all_test.json']
+        data_path: str = '/data/ty/fedllm/c3mini'
+        num_clients: int = 3
+    elif usedata == 'm3mini':
+        dev_data_path:List[str] = ['/data/ty/fedllm/m3mini/mashqa_test.json', '/data/ty/fedllm/m3mini/medical_test.json', '/data/ty/fedllm/m3mini/MedQuAD_test.json']
+        data_path: str = '/data/ty/fedllm/m3mini'
+        num_clients: int = 3
+    elif usedata == 'c3_4k':
+        dev_data_path:List[str] = ['/data/ty/fedllm/c3_4k/privacy_test.json', '/data/ty/fedllm/c3_4k/medical_test.json', '/data/ty/fedllm/c3_4k/law_all_test.json']
+        data_path: str = '/data/ty/fedllm/c3_4k'
+        num_clients: int = 3
     elif usedata == 'c5':
         dev_data_path:List[str] = ['/data/ty/fedllm/c5/privacy_test.json', '/data/ty/fedllm/c5/medical_test.json', '/data/ty/fedllm/c5/law_all_test.json','/data/ty/fedllm/c5/eli5_1_test.json', '/data/ty/fedllm/c5/eli5_2_test.json']
         data_path: str = '/data/ty/fedllm/c5'
+        num_clients: int = 5
+    elif usedata == 'c5_4k':
+        dev_data_path:List[str] = ['/data/ty/fedllm/c5_4k/privacy_test.json', '/data/ty/fedllm/c5_4k/medical_test.json', '/data/ty/fedllm/c5_4k/law_all_test.json','/data/ty/fedllm/c5_4k/eli5_1_test.json', '/data/ty/fedllm/c5_4k/eli5_2_test.json']
+        data_path: str = '/data/ty/fedllm/c5_4k'
+        num_clients: int = 5
+    elif usedata == 'c5mini':
+        dev_data_path:List[str] = ['/data/ty/fedllm/c5mini/privacy_test.json', '/data/ty/fedllm/c5mini/medical_test.json', '/data/ty/fedllm/c5mini/law_all_test.json','/data/ty/fedllm/c5mini/eli5_1_test.json', '/data/ty/fedllm/c5mini/eli5_2_test.json']
+        data_path: str = '/data/ty/fedllm/c5mini'
         num_clients: int = 5
     else:
         dev_data_path:List[str] = ['/data/ty/fedllm/c3/privacy_test.json', '/data/ty/fedllm/c3/medical_test.json', '/data/ty/fedllm/c3/law_all_test.json']
@@ -100,6 +121,11 @@ def fl_finetune(
             f"group_by_length: {group_by_length}\n"
             f"resume_from_checkpoint: {resume_from_checkpoint or False}\n"
             f"prompt template: {prompt_template_name}\n"
+            f"usedata: {usedata}\n"
+            f"data_path {data_path}\n"
+            f"dataiid {dataiid}\n"
+            f"dev_data_path {dev_data_path}\n"
+            f"model_type {model_type}\n"
         )
     # assert (
     #     global_model
@@ -125,7 +151,7 @@ def fl_finetune(
             torch_dtype=torch.float32,
             device_map=device_map,
         )
-    elif global_model == 'google/gemma-2b' or global_model == 'google/gemma-7b'or global_model == "facebook/opt-1.3b" or global_model == "/data/LLM_models/opt-1.3b":
+    elif model_type == 'gemma' or model_type == 'opt' or global_model == 'google/gemma-2b' or global_model == '/data/ty/gemma-2b' or global_model == 'google/gemma-7b'or global_model == "facebook/opt-1.3b" or global_model == "/data/LLM_models/opt-1.3b":
         model = AutoModelForCausalLM.from_pretrained(
             global_model,
             load_in_8bit=False,
@@ -144,7 +170,7 @@ def fl_finetune(
 
     if global_model == 'gpt2':
         tokenizer = GPT2Tokenizer.from_pretrained(global_model)
-    elif global_model == 'google/gemma-2b' or global_model == 'google/gemma-7b' or global_model == "facebook/opt-1.3b" or global_model == "/data/LLM_models/opt-1.3b":
+    elif model_type == 'gemma' or model_type == 'opt' or  global_model == 'google/gemma-2b' or global_model == '/data/ty/gemma-2b' or global_model == 'google/gemma-7b' or global_model == "facebook/opt-1.3b" or global_model == "/data/LLM_models/opt-1.3b":
         tokenizer = AutoTokenizer.from_pretrained(global_model, token='your_token',)
     else:
         tokenizer = LlamaTokenizer.from_pretrained(global_model, token="your_token",)
@@ -328,7 +354,7 @@ def fl_finetune(
             else:
                 model_client = model
 
-            client = GeneralClient(client_id, model_client, data_path, output_dir, dataiid)
+            client = GeneralClient(client_id, model_client, data_path, output_dir, dataiid, usedata)
 
             print("\nPreparing the local dataset and trainer for Client_{}".format(client_id))
             client.preprare_local_dataset(generate_and_tokenize_prompt, local_val_set_size)
@@ -342,7 +368,7 @@ def fl_finetune(
 
             print("Initiating the local training of Client_{}".format(client_id))
             client.initiate_local_training()
-
+            # if epoch > 1:
             print("Local training starts ... ")
             client.train()
 
@@ -397,7 +423,7 @@ def fl_finetune(
 
             print('save model')
         
-        ave_rouge, ave_bleu = global_evaluation(model, tokenizer, prompter, dev_data_path)
+        ave_rouge, ave_bleu = global_evaluation(model, tokenizer, prompter, dev_data_path, model_type)
         # print('Rouge of Epoch', str(epoch), 'is:', ave_rouge)
         # print('Bleu  of Epoch', str(epoch), 'is:', ave_bleu)
         # acc_list.append(acc)

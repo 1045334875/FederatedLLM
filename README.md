@@ -50,7 +50,45 @@ nohup python main.py --global_model "/data/LLM_models/opt-1.3b" --usedata c3 --d
 nohup python main.py --global_model "/data/LLM_models/opt-1.3b" --usedata c3  --dataiid False --output_dir './FloRA-opt-non-iid_1/' > out-opt-non-iid1_1.txt  &
 
 nohup python main.py --global_model "/data/LLM_models/opt-1.3b" --usedata c5 --dataiid True --output_dir './FloRA-opt-iid_2/' > out-opt-iid2.txt  &
+
+nohup python main.py --global_model "/data/LLM_models/opt-1.3b" --usedata c5 --dataiid True --output_dir './FloRA-opt-iid_5/' > out-opt-iid5.txt  &
+nohup python main.py --global_model "/data/LLM_models/opt-1.3b" --usedata c3 --dataiid True --output_dir './FloRA-opt-iid_3/' > out-opt-iid3.txt  &
+
 nohup python main.py --global_model "/data/LLM_models/opt-1.3b" --usedata c5 --dataiid False --output_dir './FloRA-opt-non-iid_2/' > out-opt-non-iid2_1.txt  &
+
+nohup python main.py --global_model "/data/LLM_models/opt-1.3b" --usedata c5 --dataiid False --output_dir './FloRA-opt-non-iid_5/' > out-opt-non-iid5.txt  &
+
+nohup python main.py --global_model  "/data/ty/gemma-2b" --model_type gemma  --usedata c3 --dataiid True --output_dir './FloRA-gemma-iid_3/' > out-gemma-iid3.txt  &
+nohup python main.py --global_model  "/data/ty/gemma-2b" --model_type gemma  --usedata c3 --dataiid False --output_dir './FloRA-gemma-non-iid_3/' > out-gemma-non-iid3.txt  &
+
+
+nohup python main.py --global_model  "/data/ty/gemma-2b" --model_type gemma  --usedata c3mini --dataiid True --output_dir './FloRA-gemma-iid_3mini/' > out-gemma-iid3mini_debug.txt  &
+nohup python main.py --global_model  "/data/ty/gemma-2b" --model_type gemma  --usedata c3mini --dataiid False --output_dir './FloRA-gemma-non-iid_3mini/' > out-gemma-non-iid3mini.txt  &
+
+
+nohup python main.py --global_model  "/data/ty/gemma-2b" --model_type gemma  --usedata c5mini --dataiid True --output_dir './FloRA-gemma-iid_5mini/' > out-gemma-iid5mini.txt  &
+nohup python main.py --global_model  "/data/ty/gemma-2b" --model_type gemma  --usedata c5mini --dataiid False --output_dir './FloRA-gemma-non-iid_5mini/' > out-gemma-non-iid5mini1.txt  &
+
+nohup python main.py --global_model  "/data/ty/gemma-2b" --model_type gemma  --usedata m3mini --dataiid True --output_dir './FloRA-gemma-iid_m3mini/' > out-gemma-iidm3mini.txt  &
+nohup python main.py --global_model  "/data/ty/gemma-2b" --model_type gemma  --usedata m3mini --dataiid False --output_dir './FloRA-gemma-non-iid_m3mini/' > out-gemma-non-iidm3mini.txt  &
+
+11.16
+nohup python main.py --global_model  "/data/ty/gemma-2b" --model_type gemma  --usedata c3_4k --dataiid True --local_num_epochs 1 --output_dir './FloRA-gemma-iid-c3_4k-lep1/' > out-gemma-iid-c3_4k-lep1.txt  &
+nohup python main.py --global_model  "/data/ty/gemma-2b" --model_type gemma  --usedata c3_4k --dataiid False --local_num_epochs 1  --output_dir './FloRA-gemma-non-iid-c3_4k-lep1/' > out-gemma-non-iid-c3_4k-lep1.txt  &
+
+
+nohup python main.py --global_model  "/data/ty/gemma-2b" --model_type gemma  --usedata c3_4k --dataiid True --local_num_epochs 3 --output_dir './FloRA-gemma-iid-c3_4k-lep3/' > out-gemma-iid-c3_4k-lep3.txt  &
+nohup python main.py --global_model  "/data/ty/gemma-2b" --model_type gemma  --usedata c3_4k --dataiid False --local_num_epochs 3  --output_dir './FloRA-gemma-non-iid-c3_4k-lep3/' > out-gemma-non-iid-c3_4k-lep3.txt  &
+
+
+nohup python main.py --global_model  "/data/ty/gemma-2b" --model_type gemma  --usedata c5_4k --dataiid True --local_num_epochs 1 --output_dir './FloRA-gemma-iid-c5_4k-lep1/' > out-gemma-iid-c5_4k-lep1.txt  &
+nohup python main.py --global_model  "/data/ty/gemma-2b" --model_type gemma  --usedata c5_4k --dataiid False --local_num_epochs 1  --output_dir './FloRA-gemma-non-iid-c5_4k-lep1/' > out-gemma-non-iid-c5_4k-lep1.txt  &
+
+nohup python main.py --global_model '/data/LLM_models/llama-7b' --model_type llama  --usedata m3mini --dataiid True --local_num_epochs 1 --output_dir './FloRA-llama-iid-m3mini-lep1/' > out-llama-iid-m3mini-lep1.txt  &
+nohup python main.py --global_model '/data/LLM_models/llama-7b' --model_type llama  --usedata m3mini --dataiid False --local_num_epochs 1  --output_dir './FloRA-llama-non-iid-m3mini-lep1/' > out-llama-non-iid-m3mini-lep1.txt  &
+
+nohup python main.py --global_model '/data/LLM_models/llama-7b' --model_type llama  --usedata m3mini --dataiid True --local_num_epochs 1 --output_dir './FloRA-llama-iid-m3mini-lep1_3/' > out-llama-iid-m3mini-lep1_3.txt  &
+nohup python main.py --global_model '/data/LLM_models/llama-7b' --model_type llama  --usedata m3mini --dataiid False --local_num_epochs 1  --output_dir './FloRA-llama-non-iid-m3mini-lep1_3/' > out-llama-non-iid-m3mini-lep1_3.txt  &
 
 ```
 

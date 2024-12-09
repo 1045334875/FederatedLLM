@@ -15,11 +15,16 @@ from rouge import Rouge
 # from nltk.translate.bleu_score import sentence_bleu
 # from nltk.tokenize import word_tokenize
 
-model_type = 'llama'
+# model_type = 'gemma'
 datasets.utils.logging.set_verbosity_error()
 device_map = "auto"
 max_new_token: int = 32
 verbose: bool = False
+# # 设置GPU 0进程可使用的显存最大比例为50%
+# torch.cuda.set_per_process_memory_fraction(0.5, device=0)
+
+# # 设置GPU 1进程可使用的显存最大比例为80%
+# torch.cuda.set_per_process_memory_fraction(0.8, device=1)
 
 # 设置随机数种子
 def setup_seed(seed):
@@ -29,7 +34,7 @@ def setup_seed(seed):
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
 
-setup_seed(1)
+setup_seed(14)
 
 def ngram_precision(candidate, reference, n):
     # 提取候选字符串和参考字符串的n-grams
@@ -57,7 +62,7 @@ def sentence_bleu(candidate, reference, max_n=4):
     bp = brevity_penalty(candidate, reference) 
     return bp * geo_mean
 
-def global_evaluation(model, tokenizer, prompter, dev_data_path):
+def global_evaluation(model, tokenizer, prompter, dev_data_path, model_type):
     # data_class =  ['abstract_algebra', 'anatomy', 'astronomy', 'business_ethics', 'clinical_knowledge', 'college_biology', 'college_chemistry', 'college_computer_science', 'college_mathematics', 'college_medicine', 'college_physics', 'computer_security', 'conceptual_physics', 'econometrics', 'electrical_engineering', 'elementary_mathematics', 'formal_logic', 'global_facts', 'high_school_biology', 'high_school_chemistry', 'high_school_computer_science', 'high_school_european_history', 'high_school_geography', 'high_school_government_and_politics', 'high_school_macroeconomics', 'high_school_mathematics', 'high_school_microeconomics', 'high_school_physics', 'high_school_psychology', 'high_school_statistics', 'high_school_us_history', 'high_school_world_history', 'human_aging', 'human_sexuality', 'international_law', 'jurisprudence', 'logical_fallacies', 'machine_learning', 'management', 'marketing', 'medical_genetics', 'miscellaneous', 'moral_disputes', 'moral_scenarios', 'nutrition', 'philosophy', 'prehistory', 'professional_accounting', 'professional_law', 'professional_medicine', 'professional_psychology', 'public_relations', 'security_studies', 'sociology', 'us_foreign_policy', 'virology', 'world_religions']
     # right_count_dict = dict.fromkeys(data_class, 0)
     # total_count_dict = dict.fromkeys(data_class, 0)
@@ -90,7 +95,18 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path):
             eos_token_id = 50256,
             _from_model_config = True,
         )
-
+    
+    if model_type == "opt":
+        sampling = GenerationConfig(
+            bos_token_id = 2,
+            eos_token_id = 2,
+            pad_token_id = 1,
+            # _from_model_config = True,
+        )
+    if model_type == 'gemma':
+        sampling = GenerationConfig(pad_token_id = 0,
+                                    eos_token_id = 1,
+                                    bos_token_id = 2)
     rouge = Rouge()
     score_rouge = []
     score_bleu = []
@@ -102,10 +118,14 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path):
         tgt_ans_idx = target.replace('The answer is: ','').split('. ')
         # print(tgt_ans_idx)
         # tgt_ans = target.replace('The answer is: ','').split('. ')[1]
-        if len(tgt_ans_idx)>1:
-            tgt_ans = tgt_ans_idx[1]
-        else:
-            tgt_ans = tgt_ans_idx[0]
+        tgt_ans = None
+        for i in tgt_ans_idx:
+            if len(i)>0:
+                tgt_ans = i
+                break
+
+        if tgt_ans is None:
+            continue
 
         if len(data_point["input"])==0:
             continue
@@ -113,7 +133,7 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path):
         test_prompt = prompter.generate_prompt(
             data_point["instruction"],
             data_point["input"],
-            'The answer is: ',
+            '### Response:',
         )
 
         with torch.autocast("cuda"):
@@ -137,6 +157,16 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path):
             ans = generation_output_decoded.split(split)[-1].strip()
             if len(ans) <=0 or len(tgt_ans) <=0:
                 continue
+            data = {
+                "instruction": data_point["instruction"],
+                "input" : data_point["input"],
+                "ans": ans,
+                "tgt_ans": tgt_ans
+            }
+            # with open("./ans.jsonl", 'a') as f:
+            #     json.dump(data, f)
+            #     f.write('\n')  # 每条记录后换行，便于后续读取
+
             rouge_score = rouge.get_scores(ans, tgt_ans, avg=True)# 计算rouge分数
             bleu = sentence_bleu(ans.split(), tgt_ans.split())
             score_rouge.append(rouge_score)
