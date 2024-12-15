@@ -1,0 +1,31 @@
+Federated Finetuning LLM-LoRA with params:
+global_model: /data/LLM_models/llama-7b
+data_path: /data/FL-DD classification dataset/iid_dataset
+output_dir: ./FloRA-llama-iid-csf-lep1_3/
+client_selection_strategy: fix
+client_selection_frac: 1
+num_communication_rounds: 5
+num_clients: 5
+local_batch_size: 4
+local_micro_batch_size: 2
+local_num_epochs: 1
+local_learning_rate: 0.0003
+local_val_set_size: 0
+local_save_steps: 3
+cutoff_len: 512
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_target_modules: ['q_proj', 'v_proj']
+train_on_inputs: True
+group_by_length: False
+resume_from_checkpoint: False
+prompt template: alpaca
+usedata: classification
+data_path /data/FL-DD classification dataset/iid_dataset
+dataiid True
+dev_data_path ['/data/FL-DD classification dataset/part_dataset/sport_test.jsonl', '/data/FL-DD classification dataset/part_dataset/news_test.jsonl', '/data/FL-DD classification dataset/part_dataset/finance_test.jsonl', '/data/FL-DD classification dataset/part_dataset/computer_test.jsonl', '/data/FL-DD classification dataset/part_dataset/education_test.jsonl']
+model_type llama
+
+The process of federated instruction-tuning has started..
+tensor([[3.3887, 0.3848]], device='cuda:0', dtype=torch.float16)

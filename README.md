@@ -90,6 +90,13 @@ nohup python main.py --global_model '/data/LLM_models/llama-7b' --model_type lla
 nohup python main.py --global_model '/data/LLM_models/llama-7b' --model_type llama  --usedata m3mini --dataiid True --local_num_epochs 1 --output_dir './FloRA-llama-iid-m3mini-lep1_3/' > out-llama-iid-m3mini-lep1_3.txt  &
 nohup python main.py --global_model '/data/LLM_models/llama-7b' --model_type llama  --usedata m3mini --dataiid False --local_num_epochs 1  --output_dir './FloRA-llama-non-iid-m3mini-lep1_3/' > out-llama-non-iid-m3mini-lep1_3.txt  &
 
+===============================================分类任务=========================================================
+nohup python main.py --global_model '/data/ty/gemma-2b' --model_type gemma --usedata classification --dataiid True --local_num_epochs 1 --output_dir './FloRA-gemma-iid-csf-lep1_3/' > out-gemma-iid-csf-lep1_3.txt  &
+nohup python main.py --global_model '/data/ty/gemma-2b' --model_type gemma  --usedata classification --dataiid False --local_num_epochs 1  --output_dir './FloRA-gemma-non-iid-csf-lep1_3/' > out-gemma-non-iid-csf-lep1_3.txt  &
+
+
+nohup python main.py --global_model '/data/LLM_models/llama-7b' --model_type llama   --usedata classification --dataiid True --local_num_epochs 1 --output_dir './FloRA-llama-iid-csf-lep1_3/' > out-llama-iid-m3mini-lep1_3.txt  &
+nohup python main.py --global_model '/data/LLM_models/llama-7b' --model_type llama  --usedata m3mini --dataiid False --local_num_epochs 1  --output_dir './FloRA-llama-non-iid-m3mini-lep1_3/' > out-llama-non-iid-m3mini-lep1_3.txt  &
 ```
 
 ## 现有数据集

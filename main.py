@@ -1,10 +1,13 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 from typing import List
 from tqdm import tqdm
 import fire
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaTokenizer, LlamaForCausalLM, GPT2Tokenizer, GPT2Model, GPT2LMHeadModel, AutoConfig
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from transformers import Trainer, TrainingArguments
+from transformers import TextClassificationPipeline
 from peft import (
     LoraConfig,
     get_peft_model,
@@ -91,6 +94,13 @@ def fl_finetune(
         dev_data_path:List[str] = ['/data/ty/fedllm/c5mini/privacy_test.json', '/data/ty/fedllm/c5mini/medical_test.json', '/data/ty/fedllm/c5mini/law_all_test.json','/data/ty/fedllm/c5mini/eli5_1_test.json', '/data/ty/fedllm/c5mini/eli5_2_test.json']
         data_path: str = '/data/ty/fedllm/c5mini'
         num_clients: int = 5
+    elif usedata == 'classification':
+        dev_data_path:List[str] = ['/data/FL-DD classification dataset/part_dataset/sport_test.jsonl', '/data/FL-DD classification dataset/part_dataset/news_test.jsonl', '/data/FL-DD classification dataset/part_dataset/finance_test.jsonl','/data/FL-DD classification dataset/part_dataset/computer_test.jsonl', '/data/FL-DD classification dataset/part_dataset/education_test.jsonl']
+        if dataiid:
+            data_path: str = '/data/FL-DD classification dataset/iid_dataset'
+        else:
+            data_path: str = '/data/FL-DD classification dataset/non_iid_dataset(each 1-2 cls)'
+        num_clients: int = 5
     else:
         dev_data_path:List[str] = ['/data/ty/fedllm/c3/privacy_test.json', '/data/ty/fedllm/c3/medical_test.json', '/data/ty/fedllm/c3/law_all_test.json']
         data_path: str = '/data/ty/fedllm/c3'
@@ -143,16 +153,8 @@ def fl_finetune(
     if ddp:
         device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)}
         gradient_accumulation_steps = gradient_accumulation_steps // world_size
-
-    if global_model == 'gpt2':
-        model = GPT2LMHeadModel.from_pretrained(
-            global_model,
-            load_in_8bit=False,
-            torch_dtype=torch.float32,
-            device_map=device_map,
-        )
-    elif model_type == 'gemma' or model_type == 'opt' or global_model == 'google/gemma-2b' or global_model == '/data/ty/gemma-2b' or global_model == 'google/gemma-7b'or global_model == "facebook/opt-1.3b" or global_model == "/data/LLM_models/opt-1.3b":
-        model = AutoModelForCausalLM.from_pretrained(
+    if usedata == 'classification':
+        model = AutoModelForSequenceClassification.from_pretrained(
             global_model,
             load_in_8bit=False,
             torch_dtype=torch.float32,
@@ -160,17 +162,33 @@ def fl_finetune(
             token='your token',
         )
     else:
-        model = LlamaForCausalLM.from_pretrained(
-            global_model,
-            load_in_8bit=False,
-            torch_dtype=torch.float32,
-            device_map=device_map,
-            token="your token",
-        )
+        if global_model == 'gpt2':
+            model = GPT2LMHeadModel.from_pretrained(
+                global_model,
+                load_in_8bit=False,
+                torch_dtype=torch.float32,
+                device_map=device_map,
+            )
+        elif model_type == 'gemma' or model_type == 'opt':
+            model = AutoModelForCausalLM.from_pretrained(
+                global_model,
+                load_in_8bit=False,
+                torch_dtype=torch.float32,
+                device_map=device_map,
+                token='your token',
+            )
+        else:
+            model = LlamaForCausalLM.from_pretrained(
+                global_model,
+                load_in_8bit=False,
+                torch_dtype=torch.float32,
+                device_map=device_map,
+                token="your token",
+            )
 
     if global_model == 'gpt2':
         tokenizer = GPT2Tokenizer.from_pretrained(global_model)
-    elif model_type == 'gemma' or model_type == 'opt' or  global_model == 'google/gemma-2b' or global_model == '/data/ty/gemma-2b' or global_model == 'google/gemma-7b' or global_model == "facebook/opt-1.3b" or global_model == "/data/LLM_models/opt-1.3b":
+    elif model_type == 'gemma' or model_type == 'opt' :
         tokenizer = AutoTokenizer.from_pretrained(global_model, token='your_token',)
     else:
         tokenizer = LlamaTokenizer.from_pretrained(global_model, token="your_token",)
@@ -216,6 +234,12 @@ def fl_finetune(
                 None,
                 data_point["output"],
             )
+        elif usedata == 'classification':
+            full_prompt = prompter.generate_prompt(
+                data_point["instruction"],
+                data_point["text"],
+                data_point["output"],
+            )
         else:
             full_prompt = prompter.generate_prompt(
                 data_point["instruction"],
@@ -237,7 +261,10 @@ def fl_finetune(
                                                                     user_prompt_len:
                                                                     ]  # could be sped up, probably
         return tokenized_full_prompt
-
+    if usedata == 'classification':
+        task = "SEQ_CLS"
+    else:
+        task = "CAUSAL_LM"
     #model = prepare_model_for_int8_training(model)
     if full == False:
         if stacking == False:
@@ -249,7 +276,7 @@ def fl_finetune(
                     target_modules = lora_target_modules,
                     lora_dropout = lora_dropout,
                     bias = "none",
-                    task_type = "CAUSAL_LM",
+                    task_type = task,
                 )
             else:
                 config = LoraConfig(
@@ -259,7 +286,7 @@ def fl_finetune(
                     target_modules = lora_target_modules,
                     lora_dropout = lora_dropout,
                     bias = "none",
-                    task_type = "CAUSAL_LM",
+                    task_type = task,
                 )
             model = get_peft_model(model, config)
         
@@ -271,7 +298,7 @@ def fl_finetune(
                 target_modules = lora_target_modules,
                 lora_dropout = lora_dropout,
                 bias = "none",
-                task_type = "CAUSAL_LM",
+                task_type = task,
             )
 
     if not ddp and torch.cuda.device_count() > 1:
@@ -287,8 +314,7 @@ def fl_finetune(
     acc_list = []
     rouge_list = []
     bleu_list = []
-
-
+    global_evaluation(model, tokenizer, prompter, dev_data_path, model_type, usedata)
     for epoch in tqdm(range(num_communication_rounds)):
 
         print("\nConducting the client selection")
@@ -304,7 +330,7 @@ def fl_finetune(
                         target_modules=lora_target_modules,
                         lora_dropout=lora_dropout,
                         bias="none",
-                        task_type="CAUSAL_LM",                      
+                        task_type=task,                      
                         base_model_name_or_path=global_model,
                     )
                     model_client = copy.deepcopy(model)
@@ -318,7 +344,7 @@ def fl_finetune(
                             target_modules=lora_target_modules,
                             lora_dropout=lora_dropout,
                             bias="none",
-                            task_type="CAUSAL_LM",
+                            task_type=task,
                             base_model_name_or_path=global_model,
                             )
                             model_client = copy.deepcopy(model)
@@ -330,7 +356,7 @@ def fl_finetune(
                             target_modules=lora_target_modules,
                             lora_dropout=lora_dropout,
                             bias="none",
-                            task_type="CAUSAL_LM",
+                            task_type=task,
                             base_model_name_or_path=global_model,
                             )
                             model_client = copy.deepcopy(model)
@@ -343,7 +369,7 @@ def fl_finetune(
                             target_modules=lora_target_modules,
                             lora_dropout=lora_dropout,
                             bias="none",
-                            task_type="CAUSAL_LM",
+                            task_type=task,
                             base_model_name_or_path=global_model,
                             )
                             model_client = copy.deepcopy(model)
@@ -357,14 +383,14 @@ def fl_finetune(
             client = GeneralClient(client_id, model_client, data_path, output_dir, dataiid, usedata)
 
             print("\nPreparing the local dataset and trainer for Client_{}".format(client_id))
-            client.preprare_local_dataset(generate_and_tokenize_prompt, local_val_set_size)
+            client.preprare_local_dataset(generate_and_tokenize_prompt, local_val_set_size, usedata, tokenizer)
             client.build_local_trainer(tokenizer,
                                        local_micro_batch_size,
                                        gradient_accumulation_steps,
                                        local_num_epochs,
                                        local_learning_rate,
                                        group_by_length,
-                                       ddp)
+                                       ddp, usedata)
 
             print("Initiating the local training of Client_{}".format(client_id))
             client.initiate_local_training()
