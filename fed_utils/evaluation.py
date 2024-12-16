@@ -77,6 +77,8 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path, model_type, use
             data = json.load(f)
         test_set.extend(data)
         count=0
+    # print("test len ")
+    # print(len(test_set))
 
     if model_type == 'llama':
         sampling = GenerationConfig(
@@ -169,10 +171,11 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path, model_type, use
 
                 # 假设真实标签是以下列表
                 true_label = data_point["label"]  # 你需要提供data_point["label"]的真实值
-
+                # print(true_label)
+                # print(predicted_label)
                 # 比较预测的类别与真实标签
                 is_correct = (predicted_label == true_label)
-                print(is_correct)
+                # print(is_correct)
                 score_rouge.append(is_correct)
             else:
                 with torch.no_grad():
@@ -213,39 +216,39 @@ def global_evaluation(model, tokenizer, prompter, dev_data_path, model_type, use
                     print(f"Rouge: {rouge_score}")
                     print(f"Bleu : {bleu}")
                     break
-        if usedata == "classification":
-            ans = sum(score_rouge)/len(score_rouge)
-            print(ans)
-            return ans, 0
-        else:
-            scores_accum = {
-                'rouge-1': {'r': [], 'p': [], 'f': []},
-                'rouge-2': {'r': [], 'p': [], 'f': []},
-                'rouge-l': {'r': [], 'p': [], 'f': []},
-            }
-            for scores in score_rouge:
-                for rouge_type, values in scores.items():
-                    for metric, value in values.items():
-                        scores_accum[rouge_type][metric].append(value)
-            
-            ave_rouge = {
-                'rouge-1': {'r': sum(scores_accum['rouge-1']['r']) / len(scores_accum['rouge-1']['r']),
-                            'p': sum(scores_accum['rouge-1']['p']) / len(scores_accum['rouge-1']['p']),
-                            'f': sum(scores_accum['rouge-1']['f']) / len(scores_accum['rouge-1']['f'])},
-                'rouge-2': {'r': sum(scores_accum['rouge-2']['r']) / len(scores_accum['rouge-2']['r']),
-                            'p': sum(scores_accum['rouge-2']['p']) / len(scores_accum['rouge-2']['p']),
-                            'f': sum(scores_accum['rouge-2']['f']) / len(scores_accum['rouge-2']['f'])},
-                'rouge-l': {'r': sum(scores_accum['rouge-l']['r']) / len(scores_accum['rouge-l']['r']),
-                            'p': sum(scores_accum['rouge-l']['p']) / len(scores_accum['rouge-l']['p']),
-                            'f': sum(scores_accum['rouge-l']['f']) / len(scores_accum['rouge-l']['f'])},
-            }
-            ave_bleu = sum(score_bleu)/len(score_bleu)
-            if verbose:
-                print('========== Accuracy ==========')
-                print(f"Average Rouge: {ave_rouge}")
-                print(f"Average Bleu : {ave_bleu}")
-            
-            return ave_rouge, ave_bleu
+    if usedata == "classification":
+        ans = sum(score_rouge)/len(score_rouge)
+        # print(ans)
+        return ans, 0
+    else:
+        scores_accum = {
+            'rouge-1': {'r': [], 'p': [], 'f': []},
+            'rouge-2': {'r': [], 'p': [], 'f': []},
+            'rouge-l': {'r': [], 'p': [], 'f': []},
+        }
+        for scores in score_rouge:
+            for rouge_type, values in scores.items():
+                for metric, value in values.items():
+                    scores_accum[rouge_type][metric].append(value)
+        
+        ave_rouge = {
+            'rouge-1': {'r': sum(scores_accum['rouge-1']['r']) / len(scores_accum['rouge-1']['r']),
+                        'p': sum(scores_accum['rouge-1']['p']) / len(scores_accum['rouge-1']['p']),
+                        'f': sum(scores_accum['rouge-1']['f']) / len(scores_accum['rouge-1']['f'])},
+            'rouge-2': {'r': sum(scores_accum['rouge-2']['r']) / len(scores_accum['rouge-2']['r']),
+                        'p': sum(scores_accum['rouge-2']['p']) / len(scores_accum['rouge-2']['p']),
+                        'f': sum(scores_accum['rouge-2']['f']) / len(scores_accum['rouge-2']['f'])},
+            'rouge-l': {'r': sum(scores_accum['rouge-l']['r']) / len(scores_accum['rouge-l']['r']),
+                        'p': sum(scores_accum['rouge-l']['p']) / len(scores_accum['rouge-l']['p']),
+                        'f': sum(scores_accum['rouge-l']['f']) / len(scores_accum['rouge-l']['f'])},
+        }
+        ave_bleu = sum(score_bleu)/len(score_bleu)
+        if verbose:
+            print('========== Accuracy ==========')
+            print(f"Average Rouge: {ave_rouge}")
+            print(f"Average Bleu : {ave_bleu}")
+        
+        return ave_rouge, ave_bleu
 
 #model = LlamaForCausalLM.from_pretrained(
 #model = AutoModelForCausalLM.from_pretrained(

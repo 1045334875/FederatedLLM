@@ -11,3 +11,5 @@ count*.txt
 out*.txt
 out-iid-new1.txt
 answer_task/*
+tmp.txt
+ttmp.txt

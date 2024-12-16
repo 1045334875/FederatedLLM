@@ -108,31 +108,44 @@
 # # #     print(len(i))
 # # # print(ans1)
 # # # print(tgt_ans)
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 import torch
+import transformers
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from transformers import Trainer, TrainingArguments
 from transformers import TextClassificationPipeline
 from datasets import load_dataset
-model_name = "/data/LLM_models/llama-7b"  
-model = AutoModelForSequenceClassification.from_pretrained(model_name)
+model_name = '/data/ty/gemma-2b' 
+model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=5)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 def tokenize_function(examples):
     return tokenizer(examples['text'], padding='max_length', truncation=True, max_length=128)
 local_data_path="/data/FL-DD classification dataset/iid_dataset/mix1.json"
 train_dataset=load_dataset("json", data_files=local_data_path)
-tokenized_dataset = tokenize_function(train_dataset)
+# print(train_dataset)
+
+
+local_train_dataset = train_dataset["train"].shuffle().map(tokenize_function)
+
+print(local_train_dataset)
+# tokenized_dataset = tokenize_function(train_dataset)
+
 training_args = TrainingArguments(
 output_dir='./results',          # 输出目录的路径。
-num_train_epochs=3,              # 训练轮数。
-per_device_train_batch_size=16,  # 每个设备上的批大小。
-per_device_eval_batch_size=64,   # 每个设备上的评估批大小。
-warmup_steps=500,                # 预热步数。
+num_train_epochs=10,              # 训练轮数。
+per_device_train_batch_size=2,  # 每个设备上的批大小。
+per_device_eval_batch_size=4,   # 每个设备上的评估批大小。
+warmup_steps=1,                # 预热步数。
+fp16=True,
 weight_decay=0.01,               # 权重衰减。
 logging_dir='./logs',            # 日志目录的路径。
 )
-print(tokenized_dataset)
-trainer = Trainer(model=model, args=training_args, train_dataset=tokenized_dataset)
+# print(tokenized_dataset)
+trainer = Trainer(model=model, args=training_args, train_dataset=local_train_dataset,data_collator=transformers.DataCollatorWithPadding(
+                                                        tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True)
+                                                    )
 
 trainer.train()
 eval_dataset = "/data/FL-DD classification dataset/iid_dataset/mix2.py"

@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 from typing import List
 from tqdm import tqdm
 import fire
@@ -37,7 +37,7 @@ def fl_finetune(
         local_micro_batch_size: int = 2,
         local_num_epochs: int = 1,
         local_learning_rate: float = 3e-4,
-        local_val_set_size: float = 0, # 划分五分之一为测试集
+        local_val_set_size: float = 0.2, # 划分五分之一为测试集
         local_save_steps: int = 3,
         cutoff_len: int = 512,
         # LoRA hyperparams
@@ -160,6 +160,7 @@ def fl_finetune(
             torch_dtype=torch.float32,
             device_map=device_map,
             token='your token',
+            num_labels =5
         )
     else:
         if global_model == 'gpt2':
@@ -209,6 +210,8 @@ def fl_finetune(
             padding=False,
             return_tensors=None,
         )
+        # print("result\n\n\n")
+        # print(result)
         if (
                 result["input_ids"][-1] != tokenizer.eos_token_id
                 and len(result["input_ids"]) < cutoff_len
@@ -238,7 +241,7 @@ def fl_finetune(
             full_prompt = prompter.generate_prompt(
                 data_point["instruction"],
                 data_point["text"],
-                data_point["output"],
+                data_point["industry_type"],
             )
         else:
             full_prompt = prompter.generate_prompt(
@@ -314,13 +317,15 @@ def fl_finetune(
     acc_list = []
     rouge_list = []
     bleu_list = []
-    global_evaluation(model, tokenizer, prompter, dev_data_path, model_type, usedata)
+    origin,_ = global_evaluation(model, tokenizer, prompter, dev_data_path, model_type, usedata)
+    print(f"origin pricision = {origin}")
+    all_s = []
     for epoch in tqdm(range(num_communication_rounds)):
 
         print("\nConducting the client selection")
         selected_clients_set = client_selection(num_clients, client_selection_frac, client_selection_strategy,
                                                 other_info=epoch)
-
+        each_s = []
         for client_id in selected_clients_set:
             if full == False:
                 if Adalora:
@@ -399,10 +404,11 @@ def fl_finetune(
             client.train()
 
             print("\nTerminating the local training of Client_{}".format(client_id))
-            model_client, local_dataset_len_dict, previously_selected_clients_set, last_client_id = client.terminate_local_training(
-                epoch, local_dataset_len_dict, previously_selected_clients_set)
+            model_client, local_dataset_len_dict, previously_selected_clients_set, last_client_id, one_s = client.terminate_local_training(
+                epoch, local_dataset_len_dict, previously_selected_clients_set, usedata, prompter, tokenizer)
             del client
-
+            each_s.append(one_s)
+        all_s.append(each_s)
         print("Collecting the weights of clients and performing aggregation")
         #local_dataset_len_dict = [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00]
         
@@ -449,8 +455,9 @@ def fl_finetune(
 
             print('save model')
         
-        ave_rouge, ave_bleu = global_evaluation(model, tokenizer, prompter, dev_data_path, model_type)
-        # print('Rouge of Epoch', str(epoch), 'is:', ave_rouge)
+        ave_rouge, ave_bleu = global_evaluation(model, tokenizer, prompter, dev_data_path, model_type, usedata)
+        print('Pricision of Epoch client', str(epoch), 'is:', each_s)
+        print('Pricision of Epoch', str(epoch), 'is:', ave_rouge)
         # print('Bleu  of Epoch', str(epoch), 'is:', ave_bleu)
         # acc_list.append(acc)
         rouge_list.append(ave_rouge)
@@ -471,8 +478,10 @@ def fl_finetune(
         if epoch < (num_communication_rounds - 1):
             rm_dir = os.path.join(output_dir, str(epoch))
             os.system("rm -rf {xxxxx}".format(xxxxx = rm_dir))
-
-    # print(rouge_list)      
+    print("all client precision")
+    print(all_s)
+    print("global precision")
+    print(rouge_list)      
     # print(bleu_list)       
     #os.system("lm_eval --model_args pretrained=huggyllama/llama-7b,parallelize=True,load_in_4bit=False,peft={current_dir} --tasks arc_challenge,mmlu --device cuda --output_path {current_dir}".format(current_dir = os.path.join(output_dir, str(epoch))))
     filename = output_dir + 'log.txt'
