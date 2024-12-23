@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from typing import List
 from tqdm import tqdm
 import fire
@@ -64,7 +64,8 @@ def fl_finetune(
         full: bool = False,
         usedata: str = 'c3',
         dataiid: bool = True,
-        model_type = 'gemma'
+        model_type = 'gemma',
+        useDD: bool = True
 ):
     if usedata == 'c3':
         dev_data_path:List[str] = ['/data/ty/fedllm/c3/privacy_test.json', '/data/ty/fedllm/c3/medical_test.json', '/data/ty/fedllm/c3/law_all_test.json']
@@ -97,9 +98,9 @@ def fl_finetune(
     elif usedata == 'classification':
         dev_data_path:List[str] = ['/data/FL-DD classification dataset/part_dataset/sport_test.jsonl', '/data/FL-DD classification dataset/part_dataset/news_test.jsonl', '/data/FL-DD classification dataset/part_dataset/finance_test.jsonl','/data/FL-DD classification dataset/part_dataset/computer_test.jsonl', '/data/FL-DD classification dataset/part_dataset/education_test.jsonl']
         if dataiid:
-            data_path: str = '/data/FL-DD classification dataset/iid_dataset'
+            data_path: str = '/data/FL-DD classification dataset/iid_dataset_10000'
         else:
-            data_path: str = '/data/FL-DD classification dataset/non_iid_dataset(each 1-2 cls)'
+            data_path: str = '/data/FL-DD classification dataset/non_iid_dataset(each 3-4 cls)_10000'
         num_clients: int = 5
     else:
         dev_data_path:List[str] = ['/data/ty/fedllm/c3/privacy_test.json', '/data/ty/fedllm/c3/medical_test.json', '/data/ty/fedllm/c3/law_all_test.json']
@@ -388,7 +389,7 @@ def fl_finetune(
             client = GeneralClient(client_id, model_client, data_path, output_dir, dataiid, usedata)
 
             print("\nPreparing the local dataset and trainer for Client_{}".format(client_id))
-            client.preprare_local_dataset(generate_and_tokenize_prompt, local_val_set_size, usedata, tokenizer)
+            client.preprare_local_dataset(generate_and_tokenize_prompt, local_val_set_size, usedata, tokenizer, useDD)
             client.build_local_trainer(tokenizer,
                                        local_micro_batch_size,
                                        gradient_accumulation_steps,

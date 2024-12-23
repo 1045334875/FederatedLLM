@@ -6,6 +6,7 @@ from collections import OrderedDict
 from tqdm import tqdm
 import torch
 from DD import DDDataset
+from DD import DDDataset, DD_DataCollatorForSeq2Seq
 from peft import (
     get_peft_model_state_dict,
     set_peft_model_state_dict,
@@ -34,8 +35,15 @@ class GeneralClient:
         self.output_dir = output_dir
         self.local_output_dir = os.path.join(self.output_dir, "trainer_saved", "local_output_{}".format(self.client_id))
 
-    def preprare_local_dataset(self, generate_and_tokenize_prompt, local_val_set_size, usedata, tokenizer):  # 这里把它拆分成测试集和训练集然后变成token了，里面用max_len去cut了一下
-        if usedata == 'classification':
+    def preprare_local_dataset(self, generate_and_tokenize_prompt, local_val_set_size, usedata, tokenizer, useDD):  # 这里把它拆分成测试集和训练集然后变成token了，里面用max_len去cut了一下
+        if useDD:
+            if local_val_set_size > 0:
+                local_train_val = self.local_data["train"].train_test_split(
+                        test_size=local_val_set_size, shuffle=True, seed=42
+                    )
+            self.local_train_dataset = DDDataset(tokenizer, self.local_data_path, usedata)
+            self.local_eval_dataset = None
+        elif usedata == 'classification':
             def tokenize_function(examples):
                 result = tokenizer(examples['text'], padding='max_length', truncation=True, max_length=128)
                 result["labels"] = [examples['label']]
@@ -55,6 +63,7 @@ class GeneralClient:
             
                 self.local_eval_dataset = None
             print(self.local_train_dataset)
+            
         else:
             if local_val_set_size > 0:
                 local_train_val = self.local_data["train"].train_test_split(
@@ -118,7 +127,9 @@ class GeneralClient:
                                                   data_collator=transformers.DataCollatorForSeq2Seq(
                                                       tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True)
                                                   )
-        # DD(tokenizer, pad_to_multiple_of=8, return_tensors="pt"),
+                                                #   data_collator=DD_DataCollatorForSeq2Seq(
+                                                #       tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True)
+                                                #   )
 
     def initiate_local_training(self):
         self.model.config.use_cache = False
